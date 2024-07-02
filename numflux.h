@@ -67,6 +67,49 @@ struct HLL : NumericalFlux<HLL> {
   }
 };
 
+struct HLLC : NumericalFlux<HLLC> {
+  template<typename System>
+  auto compute(System const& sys,
+               typename System::state_type const& left,
+               typename System::state_type const& right) const;
+
+  auto compute(IdealGasEuler const& sys,
+               typename IdealGasEuler::state_type const& left,
+               typename IdealGasEuler::state_type const& right) const {
+    auto const fl = sys.flux(left);
+    auto const fr = sys.flux(right);
+    auto const wsl = sys.wave_speeds(left);
+    auto const wsr = sys.wave_speeds(right);
+    auto const lmin = *std::min_element(wsl.begin(), wsl.end());
+    auto const rmin = *std::min_element(wsr.begin(), wsr.end());
+    auto const cl = std::min(lmin, rmin);
+    if (0 <= cl) return fl;
+    auto const lmax = *std::max_element(wsl.begin(), wsl.end());
+    auto const rmax = *std::max_element(wsr.begin(), wsr.end());
+    auto const cr = std::max(lmax, rmax);
+    if (cr <= 0) return fr;
+
+    // Compute intermediate state
+    auto const rl = sys.density(left);
+    auto const rr = sys.density(right);
+    auto const pl = sys.pressure(left);
+    auto const pr = sys.pressure(right);
+    auto const ul = sys.velocity(left);
+    auto const ur = sys.velocity(right);
+    auto const cstar = (pr - pl + rl * ul * (cl - ul) - rr * ur * (cr - ur))
+      / (rl * (cl - ul) - rr * (cr - ur));
+    auto const dstar = typename IdealGasEuler::state_type{0, 1, cstar};
+    auto const plstar = pl + rl * (cl - ul) * (cstar - ul);
+    auto const ulstar = (cl * left  - fl + plstar * dstar) / (cl - cstar);
+    auto const flstar = fl + cl * (ulstar - left);
+    if (0 <= cstar) return flstar;
+    auto const prstar = pr + rr * (cr - ur) * (cstar - ur);
+    auto const urstar = (cr * right - fr + prstar * dstar) / (cr - cstar);
+    auto const frstar = fr + cr * (urstar - right);
+    return frstar;
+  }
+};
+
 } // namespace fivo
 
 #endif // FIVO_NUMFLUX_H
