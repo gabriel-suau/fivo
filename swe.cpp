@@ -45,6 +45,7 @@ int main() {
   auto const topography = [&] (double const& x, state_type const&) { return bump(x); };
   auto const quantities = std::make_tuple(topography, water_height, total_height, discharge, velocity);
 
+  // Solve and save for each numerical flux
   fivo::IOManager io("swe_rusanov", 20, mesh);
   io.basename("swe_rusanov");
   X = system.create_init_state(mesh, init);

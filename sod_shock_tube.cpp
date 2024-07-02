@@ -28,10 +28,16 @@ int main() {
                       else return state_type{rr, jr, er};
                     };
 
+  // Output quantities
+  auto const rho = [&] (double const&, state_type const& s) { return s[0]; };
+  auto const pressure = [&] (double const&, state_type const& s) { return system.pressure(s); };
+  auto const velocity = [&] (double const&, state_type const& s) { return s[1] / s[0]; };
+  auto const quantities = std::make_tuple(rho, pressure, velocity);
+
   fivo::IOManager io("euler_sod_rusanov", 1, mesh);
   auto X = system.create_init_state(mesh, init);
-  fivo::solve(io, mesh, system, fivo::Rusanov{}, fivo::EulerStep{}, X, t0, tf, dt);
+  fivo::solve(io, mesh, system, fivo::Rusanov{}, fivo::EulerStep{}, X, t0, tf, dt, quantities);
   io.basename("euler_sod_hll");
   X = system.create_init_state(mesh, init);
-  fivo::solve(io, mesh, system, fivo::HLL{}, fivo::EulerStep{}, X, t0, tf, dt);
+  fivo::solve(io, mesh, system, fivo::HLL{}, fivo::EulerStep{}, X, t0, tf, dt, quantities);
 }
