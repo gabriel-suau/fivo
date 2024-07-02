@@ -195,7 +195,7 @@ struct LinearAdvection : System<fivo::state<double, 1>>,
 
   value_type velocity(state_type const&) const final { return m_v; }
   value_type velocity() const { return m_v; }
-  value_type velocity(value_type const& value) { return m_v = value; }
+  LinearAdvection& velocity(value_type const& value) { m_v = value; return *this; }
 
   state_type flux(state_type const& s) const final { return m_v * s; }
 
@@ -367,8 +367,10 @@ struct SWE : System<fivo::state<double, 2>>,
 
   auto grav() const { return m_grav; }
   SWE& grav(value_type const& value) { m_grav = value; return *this; }
+
   auto friction_model() const { return m_fmodel; }
   SWE& friction_model(std::shared_ptr<FrictionModel> const& value) { m_fmodel = value; return *this; }
+
   auto topography() const { return m_topo; }
   template<typename TopoFunc, typename TopoDxFunc>
   SWE& topography(TopoFunc&& func, TopoDxFunc&& dfunc) {
