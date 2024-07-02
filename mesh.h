@@ -16,6 +16,8 @@ struct Mesh {
   auto dx() const { return m_dx; }
   auto nx() const { return m_nx; }
 
+  auto cell_center(int i) const { return xmin() + (i + 0.5) * dx(); }
+
   auto xmin(double value) {
     m_xmin = value;
     m_dx = (m_xmax - m_xmin) / m_nx;

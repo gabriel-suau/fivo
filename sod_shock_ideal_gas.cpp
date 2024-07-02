@@ -6,7 +6,7 @@ int main() {
   double const tf = 0.2;
   double const dt = 1e-4;
 
-  fivo::Mesh mesh(0., 1., 400);
+  fivo::Mesh mesh(0., 1., 200);
 
   // Boundary conditions
   auto left_bc = fivo::IdealGasEuler::BCNeumann::make();
@@ -29,15 +29,19 @@ int main() {
                     };
 
   // Output quantities
-  auto const rho = [&] (double const&, state_type const& s) { return s[0]; };
+  auto const density  = [&] (double const&, state_type const& s) { return s[0]; };
   auto const pressure = [&] (double const&, state_type const& s) { return system.pressure(s); };
-  auto const velocity = [&] (double const&, state_type const& s) { return s[1] / s[0]; };
-  auto const quantities = std::make_tuple(rho, pressure, velocity);
+  auto const velocity = [&] (double const&, state_type const& s) { return system.velocity(s); };
+  auto const quantities = std::make_tuple(density, pressure, velocity);
 
-  fivo::IOManager io("euler_sod_rusanov", 1, mesh);
+  // Solve and save for each numerical flux
+  fivo::IOManager io("ideal_gas_euler_sod_rusanov", 1, mesh);
   auto X = system.create_init_state(mesh, init);
   fivo::solve(io, system, fivo::Rusanov{}, fivo::EulerStep{}, X, t0, tf, dt, quantities);
-  io.basename("euler_sod_hll");
+  io.basename("ideal_gas_euler_sod_hll");
   X = system.create_init_state(mesh, init);
   fivo::solve(io, system, fivo::HLL{}, fivo::EulerStep{}, X, t0, tf, dt, quantities);
+  io.basename("ideal_gas_euler_sod_hllc");
+  X = system.create_init_state(mesh, init);
+  fivo::solve(io, system, fivo::HLLC{}, fivo::EulerStep{}, X, t0, tf, dt, quantities);
 }

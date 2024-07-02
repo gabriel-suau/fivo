@@ -9,6 +9,13 @@
 
 namespace fivo {
 
+struct HasMesh {
+  HasMesh() = default;
+  explicit HasMesh(Mesh const& mesh) : m_mesh(mesh) {}
+  Mesh const& mesh() const { return m_mesh; }
+  Mesh m_mesh;
+};
+
 template<typename State>
 struct HasFlux {
   using state_type = State;
@@ -54,13 +61,6 @@ struct HasAdmissible {
   }
 };
 
-struct HasMesh {
-  HasMesh() = default;
-  explicit HasMesh(Mesh const& mesh) : m_mesh(mesh) {}
-  Mesh const& mesh() const { return m_mesh; }
-  Mesh m_mesh;
-};
-
 template<typename State>
 struct HasVelocity {
   using state_type = State;
@@ -72,6 +72,21 @@ struct HasVelocity {
     std::vector<value_type> out(in.size());
     std::transform(in.begin(), in.end(), out.begin(),
                    [&] (state_type const& s) { return velocity(s); });
+    return out;
+  }
+};
+
+template<typename State>
+struct HasDensity {
+  using state_type = State;
+  using global_state_type = fivo::global_state<State>;
+  using value_type = typename state_type::value_type;
+
+  virtual value_type density(state_type const& in) const = 0;
+  auto gdensity(global_state_type const& in) const {
+    std::vector<value_type> out(in.size());
+    std::transform(in.begin(), in.end(), out.begin(),
+                   [&] (state_type const& s) { return density(s); });
     return out;
   }
 };
@@ -100,10 +115,7 @@ struct HasInitState {
   template<typename InitFunc>
   auto create_init_state(Mesh const& mesh, InitFunc&& func) const {
     global_state_type X0(mesh.nx());
-    for (int i = 0; i < mesh.nx(); ++i) {
-      auto const x = mesh.xmin() + (i + 0.5) * mesh.dx();
-      X0[i] = func(x);
-    }
+    for (int i = 0; i < mesh.nx(); ++i) { X0[i] = func(mesh.cell_center(i)); }
     return X0;
   }
 };
@@ -156,6 +168,7 @@ struct System : HasMesh, HasFlux<State>, HasWaveSpeed<State>, HasAdmissible<Stat
 
 /* LINEAR ADVECTION EQUATION */
 struct LinearAdvection : System<fivo::state<double, 1>>,
+                         HasDensity<fivo::state<double, 1>>,
                          HasVelocity<fivo::state<double, 1>> {
   using state_type = fivo::state<double, 1>;
   using global_state_type = fivo::global_state<state_type>;
@@ -193,6 +206,7 @@ struct LinearAdvection : System<fivo::state<double, 1>>,
 
   value_type m_v;
 
+  value_type density(state_type const& s) const final { return s[0]; }
   value_type velocity(state_type const&) const final { return m_v; }
   value_type velocity() const { return m_v; }
   LinearAdvection& velocity(value_type const& value) { m_v = value; return *this; }
@@ -432,6 +446,7 @@ struct SWE : System<fivo::state<double, 2>>,
 };
 
 struct IdealGasEuler : System<fivo::state<double, 3>>,
+                       HasDensity<fivo::state<double, 3>>,
                        HasVelocity<fivo::state<double, 3>>,
                        HasPressure<fivo::state<double, 3>> {
   using state_type = fivo::state<double, 3>;
@@ -474,8 +489,8 @@ struct IdealGasEuler : System<fivo::state<double, 3>>,
   auto gamma() const { return m_gamma; }
   IdealGasEuler& gamma(value_type const& value) { m_gamma = value; return *this; }
 
+  value_type density(state_type const& s) const final { return s[0]; }
   value_type velocity(state_type const& s) const final { return s[1] / s[0]; }
-
   value_type pressure(state_type const& s) const final {
     auto const& [r, j, e] = s;
     return (m_gamma - 1) * (e - 0.5 * j * j / r);
@@ -504,6 +519,7 @@ struct IdealGasEuler : System<fivo::state<double, 3>>,
 };
 
 struct StiffenedGasEuler : System<fivo::state<double, 3>>,
+                           HasDensity<fivo::state<double, 3>>,
                            HasVelocity<fivo::state<double, 3>>,
                            HasPressure<fivo::state<double, 3>> {
   using state_type = fivo::state<double, 3>;
@@ -550,8 +566,8 @@ struct StiffenedGasEuler : System<fivo::state<double, 3>>,
   StiffenedGasEuler& gamma(value_type const& value) { m_gamma = value; return *this; }
   StiffenedGasEuler& p0(value_type const& value) { m_p0 = value; return *this; }
 
+  value_type density(state_type const& s) const final { return s[0]; }
   value_type velocity(state_type const& s) const final { return s[1] / s[0]; }
-
   value_type pressure(state_type const& s) const final {
     auto const& [r, j, e] = s;
     return (m_gamma - 1) * (e - 0.5 * j * j / r) - m_gamma * m_p0;
