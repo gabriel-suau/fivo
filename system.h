@@ -155,8 +155,7 @@ struct System : HasMesh, HasFlux<State>, HasWaveSpeed<State>, HasAdmissible<Stat
 };
 
 /* LINEAR ADVECTION EQUATION */
-template<typename VelocityFunc>
-struct Advection : System<fivo::state<double, 1>> {
+struct LinearAdvection : System<fivo::state<double, 1>> {
   using state_type = fivo::state<double, 1>;
   using global_state_type = fivo::global_state<state_type>;
   using value_type = typename state_type::value_type;
@@ -187,11 +186,11 @@ struct Advection : System<fivo::state<double, 1>> {
     }
   };
 
-  Advection(Mesh const& mesh, std::shared_ptr<BC> const& left_bc,
-            std::shared_ptr<BC> const& right_bc, VelocityFunc const& v)
+  LinearAdvection(Mesh const& mesh, std::shared_ptr<BC> const& left_bc,
+                  std::shared_ptr<BC> const& right_bc, value_type const& v)
     : System(mesh, left_bc, right_bc), m_v(v) {}
 
-  VelocityFunc m_v;
+  value_type m_v;
 
   state_type flux(state_type const& s) const final { return m_v * s; }
 
