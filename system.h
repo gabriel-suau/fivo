@@ -218,6 +218,122 @@ struct LinearAdvection : System<fivo::state<double, 1>>,
   bool admissible(state_type const&) const final { return true; }
 };
 
+/* LINEAR ACOUSTICS EQUATIONS : PRESSURE-VELOCITY FORMULATION */
+struct LinearAcousticsPressure : System<fivo::state<double, 2>>,
+                                 HasDensity<fivo::state<double, 2>>,
+                                 HasPressure<fivo::state<double, 2>>,
+                                 HasVelocity<fivo::state<double, 2>> {
+  using state_type = fivo::state<double, 2>;
+  using global_state_type = fivo::global_state<state_type>;
+  using value_type = typename state_type::value_type;
+
+  using BC = HasBC<state_type>::BC;
+  struct BCWall : BC {
+    static inline auto make() { return std::make_shared<BCWall>(); }
+    state_type compute(Mesh const& mesh, value_type const& t,
+                       state_type const& in, state_type const& in_opbound,
+                       int const normal) const final {
+      return state_type{in[0], -in[1]};
+    }
+  };
+  struct BCNeumann : BC {
+    static inline auto make() { return std::make_shared<BCNeumann>(); }
+    state_type compute(Mesh const& mesh, value_type const& t,
+                       state_type const& in, state_type const& in_opbound,
+                       int const normal) const final {
+      return in;
+    }
+  };
+  struct BCPeriodic : BC {
+    static inline auto make() { return std::make_shared<BCPeriodic>(); }
+    state_type compute(Mesh const& mesh, value_type const& t,
+                       state_type const& in, state_type const& in_opbound,
+                       int const normal) const final {
+      return in_opbound;
+    }
+  };
+
+  LinearAcousticsPressure(Mesh const& mesh, std::shared_ptr<BC> const& left_bc,
+                          std::shared_ptr<BC> const& right_bc,
+                          value_type const& r0, value_type const& c, value_type const& u0 = 0)
+    : System(mesh, left_bc, right_bc), m_r0(r0), m_c(c), m_u0(u0) {}
+
+  value_type m_r0, m_c, m_u0;
+
+  value_type density(state_type const& s) const final { return s[0] / (m_c * m_c); }
+  value_type pressure(state_type const& s) const final { return s[0]; }
+  value_type velocity(state_type const& s) const final { return s[1]; }
+
+  state_type flux(state_type const& s) const final {
+    return {m_u0 * s[0] + m_r0 * m_c * m_c * s[1],
+            s[0] / m_r0 + m_u0 * s[1]};
+  }
+
+  state_type wave_speeds(state_type const& /* s */) const final {
+    return state_type{m_u0 - m_c, m_u0 + m_c};
+  }
+
+  bool admissible(state_type const&) const final { return true; }
+};
+
+/* LINEAR ACOUSTICS EQUATIONS : DENSITY-VELOCITY FORMULATION */
+struct LinearAcousticsDensity : System<fivo::state<double, 2>>,
+                                HasDensity<fivo::state<double, 2>>,
+                                HasPressure<fivo::state<double, 2>>,
+                                HasVelocity<fivo::state<double, 2>> {
+  using state_type = fivo::state<double, 2>;
+  using global_state_type = fivo::global_state<state_type>;
+  using value_type = typename state_type::value_type;
+
+  using BC = HasBC<state_type>::BC;
+  struct BCWall : BC {
+    static inline auto make() { return std::make_shared<BCWall>(); }
+    state_type compute(Mesh const& mesh, value_type const& t,
+                       state_type const& in, state_type const& in_opbound,
+                       int const normal) const final {
+      return state_type{in[0], -in[1]};
+    }
+  };
+  struct BCNeumann : BC {
+    static inline auto make() { return std::make_shared<BCNeumann>(); }
+    state_type compute(Mesh const& mesh, value_type const& t,
+                       state_type const& in, state_type const& in_opbound,
+                       int const normal) const final {
+      return in;
+    }
+  };
+  struct BCPeriodic : BC {
+    static inline auto make() { return std::make_shared<BCPeriodic>(); }
+    state_type compute(Mesh const& mesh, value_type const& t,
+                       state_type const& in, state_type const& in_opbound,
+                       int const normal) const final {
+      return in_opbound;
+    }
+  };
+
+  LinearAcousticsDensity(Mesh const& mesh, std::shared_ptr<BC> const& left_bc,
+                          std::shared_ptr<BC> const& right_bc,
+                          value_type const& r0, value_type const& c, value_type const& u0 = 0)
+    : System(mesh, left_bc, right_bc), m_r0(r0), m_c(c), m_u0(u0) {}
+
+  value_type m_r0, m_c, m_u0;
+
+  value_type density(state_type const& s) const final { return s[0]; }
+  value_type pressure(state_type const& s) const final { return m_c * m_c * s[0]; }
+  value_type velocity(state_type const& s) const final { return s[1]; }
+
+  state_type flux(state_type const& s) const final {
+    return {m_u0 * s[0] + m_r0 * s[1],
+            m_c * m_c * s[0] + m_u0 * s[1]};
+  }
+
+  state_type wave_speeds(state_type const& /* s */) const final {
+    return state_type{m_u0 - m_c, m_u0 + m_c};
+  }
+
+  bool admissible(state_type const&) const final { return true; }
+};
+
 /* BURGERS EQUATION */
 struct Burgers : System<fivo::state<double, 1>>,
                  HasVelocity<fivo::state<double, 1>> {
@@ -442,6 +558,83 @@ struct SWE : System<fivo::state<double, 2>>,
       S[i] = state_type{0., - m_gdz[i] * X[i][0]} + m_fmodel->apply(m_grav, X[i]);
     }
     return S;
+  }
+};
+
+struct IsentropicEuler : System<fivo::state<double, 2>>,
+                         HasDensity<fivo::state<double, 2>>,
+                         HasVelocity<fivo::state<double, 2>>,
+                         HasPressure<fivo::state<double, 2>> {
+  using state_type = fivo::state<double, 2>;
+  using global_state_type = fivo::global_state<state_type>;
+  using value_type = typename state_type::value_type;
+
+  /* BOUNDARY CONDITIONS */
+  using BC = HasBC<state_type>::BC;
+  struct BCWall : BC {
+    static inline auto make() { return std::make_shared<BCWall>(); }
+    state_type compute(Mesh const& mesh, value_type const& t,
+                       state_type const& in, state_type const& in_opbound,
+                       int const normal) const final {
+      return state_type{in[0], -in[1]};
+    }
+  };
+  struct BCNeumann : BC {
+    static inline auto make() { return std::make_shared<BCNeumann>(); }
+    state_type compute(Mesh const& mesh, value_type const& t,
+                       state_type const& in, state_type const& in_opbound,
+                       int const normal) const final {
+      return in;
+    }
+  };
+  struct BCPeriodic : BC {
+    static inline auto make() { return std::make_shared<BCPeriodic>(); }
+    state_type compute(Mesh const& mesh, value_type const& t,
+                       state_type const& in, state_type const& in_opbound,
+                       int const normal) const final {
+      return in_opbound;
+    }
+  };
+
+  explicit IsentropicEuler(Mesh const& mesh,
+                           std::shared_ptr<BC> const& left_bc,
+                           std::shared_ptr<BC> const& right_bc,
+                           value_type const& kappa, value_type const& gamma)
+    : System(mesh, left_bc, right_bc), m_kappa(kappa), m_gamma(gamma) {}
+
+  value_type m_kappa, m_gamma;
+
+  auto kappa() const { return m_kappa; }
+  auto gamma() const { return m_gamma; }
+  IsentropicEuler& kappa(value_type const& value) { m_kappa = value; return *this; }
+  IsentropicEuler& gamma(value_type const& value) { m_gamma = value; return *this; }
+
+  value_type density(state_type const& s) const final { return s[0]; }
+  value_type velocity(state_type const& s) const final { return s[1] / s[0]; }
+
+  value_type pressure(state_type const& s) const final {
+    return m_kappa * std::pow(s[0], m_gamma);
+  }
+
+  state_type flux(state_type const& s) const final {
+    auto const p = pressure(s);
+    auto const& [r, j] = s;
+    auto const u = j / r;
+    return state_type{j, r * u * u + p};
+  }
+
+  state_type wave_speeds(state_type const& s) const final {
+    auto const p = pressure(s);
+    auto const r = s[0];
+    auto const u = s[1] / r;
+    auto const c = std::sqrt(m_gamma * p / r);
+    return state_type{u - c, u + c};
+  }
+
+  bool admissible(state_type const& s) const final {
+    auto const r = s[0];
+    auto const p = pressure(s);
+    return (r > 0 && p > 0);
   }
 };
 
