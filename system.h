@@ -504,8 +504,8 @@ struct IdealGasEuler : System<fivo::state<double, 3>>,
 };
 
 struct StiffenedGasEuler : System<fivo::state<double, 3>>,
-                         HasVelocity<fivo::state<double, 3>>,
-                         HasPressure<fivo::state<double, 3>> {
+                           HasVelocity<fivo::state<double, 3>>,
+                           HasPressure<fivo::state<double, 3>> {
   using state_type = fivo::state<double, 3>;
   using global_state_type = fivo::global_state<state_type>;
   using value_type = typename state_type::value_type;

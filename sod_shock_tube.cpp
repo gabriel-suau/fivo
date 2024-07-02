@@ -36,8 +36,8 @@ int main() {
 
   fivo::IOManager io("euler_sod_rusanov", 1, mesh);
   auto X = system.create_init_state(mesh, init);
-  fivo::solve(io, mesh, system, fivo::Rusanov{}, fivo::EulerStep{}, X, t0, tf, dt, quantities);
+  fivo::solve(io, system, fivo::Rusanov{}, fivo::EulerStep{}, X, t0, tf, dt, quantities);
   io.basename("euler_sod_hll");
   X = system.create_init_state(mesh, init);
-  fivo::solve(io, mesh, system, fivo::HLL{}, fivo::EulerStep{}, X, t0, tf, dt, quantities);
+  fivo::solve(io, system, fivo::HLL{}, fivo::EulerStep{}, X, t0, tf, dt, quantities);
 }
