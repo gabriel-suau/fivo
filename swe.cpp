@@ -49,8 +49,8 @@ int main() {
   fivo::IOManager io("swe_rusanov", 20, mesh);
   io.basename("swe_rusanov");
   X = system.create_init_state(mesh, init);
-  fivo::solve(io, mesh, system, fivo::Rusanov{}, fivo::EulerStep{}, X, t0, tf, dt, quantities);
+  fivo::solve(io, system, fivo::Rusanov{}, fivo::EulerStep{}, X, t0, tf, dt, quantities);
   io.basename("swe_hll");
   X = system.create_init_state(mesh, init);
-  fivo::solve(io, mesh, system, fivo::HLL{}, fivo::EulerStep{}, X, t0, tf, dt, quantities);
+  fivo::solve(io, system, fivo::HLL{}, fivo::EulerStep{}, X, t0, tf, dt, quantities);
 }

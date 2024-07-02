@@ -25,10 +25,18 @@ int main() {
                       else return state_type{1., 0.};
                     };
 
+  // Output quantities
+  auto const water_height = [&] (double const&, state_type const& s) { return s[0]; };
+  auto const discharge = [&] (double const&, state_type const& s) { return s[1]; };
+  auto const total_height = [&] (double const&, state_type const& s) { return s[0]; };
+  auto const velocity = [&] (double const&, state_type const& s) { return system.velocity(s); };
+  auto const topography = [&] (double const&, state_type const&) { return 0; };
+  auto const quantities = std::make_tuple(topography, water_height, total_height, discharge, velocity);
+
   fivo::IOManager io("swe_dam_break_rusanov", 10, mesh);
   auto X = system.create_init_state(mesh, init);
-  fivo::solve(io, mesh, system, fivo::Rusanov{}, fivo::EulerStep{}, X, t0, tf, dt);
+  fivo::solve(io, system, fivo::Rusanov{}, fivo::EulerStep{}, X, t0, tf, dt, quantities);
   io.basename("swe_dam_break_hll");
   X = system.create_init_state(mesh, init);
-  fivo::solve(io, mesh, system, fivo::HLL{}, fivo::EulerStep{}, X, t0, tf, dt);
+  fivo::solve(io, system, fivo::HLL{}, fivo::EulerStep{}, X, t0, tf, dt, quantities);
 }

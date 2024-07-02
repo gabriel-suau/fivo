@@ -25,8 +25,8 @@ int main(int argc, char** argv) {
 
   // Solve and save for each numerical flux
   fivo::IOManager io("advection_rusanov", 10, mesh);
-  fivo::solve(io, mesh, system, fivo::Rusanov{}, fivo::HeunStep{}, X, t0, tf, dt, u);
+  fivo::solve(io, system, fivo::Rusanov{}, fivo::HeunStep{}, X, t0, tf, dt, u);
   io.basename("advection_hll");
   X = system.create_init_state(mesh, init);
-  fivo::solve(io, mesh, system, fivo::HLL{}, fivo::HeunStep{}, X, t0, tf, dt, u);
+  fivo::solve(io, system, fivo::HLL{}, fivo::HeunStep{}, X, t0, tf, dt, u);
 }

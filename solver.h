@@ -32,7 +32,7 @@ void solve(IOManager const& io, System const& system, NumFlux const& numflux,
                      auto const right_bc = right_bc_func->compute(mesh, t, X.back(), X.front(), -1);
                      auto const nf = numflux.gcompute(system, left_bc, right_bc, X);
                      rhs_value[0] = rhs_value[0] + nf[0];
-                     for (int i = 1; i < X.size(); ++i) {
+                     for (std::size_t i = 1; i < X.size(); ++i) {
                        rhs_value[i - 1] -= nf[i];
                        rhs_value[i] += nf[i];
                      }
@@ -85,7 +85,7 @@ void solve_splitting(IOManager const& io, System const& system, NumFlux const& n
       auto const right_bc = right_bc_func->compute(mesh, t, X.back(), X.front(), -1);
       auto const nf = numflux.gcompute(system, left_bc, right_bc, X);
       rhs_value[0] = rhs_value[0] + nf[0];
-      for (int i = 1; i < X.size(); ++i) {
+      for (std::size_t i = 1; i < X.size(); ++i) {
         rhs_value[i - 1] -= nf[i];
         rhs_value[i] += nf[i];
       }

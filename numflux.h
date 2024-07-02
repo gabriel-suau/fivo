@@ -22,7 +22,7 @@ struct NumericalFlux {
                 typename System::global_state_type const& state) const {
     typename System::global_state_type numflux(state.size() + 1);
     numflux[0] = compute(sys, left_bc, state.front());
-    for (int i = 1; i < numflux.size() - 1; ++i)
+    for (std::size_t i = 1; i < numflux.size() - 1; ++i)
       numflux[i] = compute(sys, state[i-1], state[i]);
     numflux.back() = compute(sys, state.back(), right_bc);
     return numflux;

@@ -54,6 +54,13 @@ struct HasAdmissible {
   }
 };
 
+struct HasMesh {
+  HasMesh() = default;
+  explicit HasMesh(Mesh const& mesh) : m_mesh(mesh) {}
+  Mesh const& mesh() const { return m_mesh; }
+  Mesh m_mesh;
+};
+
 template<typename State>
 struct HasVelocity {
   using state_type = State;
@@ -67,13 +74,6 @@ struct HasVelocity {
                    [&] (state_type const& s) { return velocity(s); });
     return out;
   }
-};
-
-struct HasMesh {
-  HasMesh() = default;
-  explicit HasMesh(Mesh const& mesh) : m_mesh(mesh) {}
-  Mesh const& mesh() const { return m_mesh; }
-  Mesh m_mesh;
 };
 
 template<typename State>
@@ -155,7 +155,8 @@ struct System : HasMesh, HasFlux<State>, HasWaveSpeed<State>, HasAdmissible<Stat
 };
 
 /* LINEAR ADVECTION EQUATION */
-struct LinearAdvection : System<fivo::state<double, 1>> {
+struct LinearAdvection : System<fivo::state<double, 1>>,
+                         HasVelocity<fivo::state<double, 1>> {
   using state_type = fivo::state<double, 1>;
   using global_state_type = fivo::global_state<state_type>;
   using value_type = typename state_type::value_type;
@@ -192,6 +193,10 @@ struct LinearAdvection : System<fivo::state<double, 1>> {
 
   value_type m_v;
 
+  value_type velocity(state_type const&) const final { return m_v; }
+  value_type velocity() const { return m_v; }
+  value_type velocity(value_type const& value) { return m_v = value; }
+
   state_type flux(state_type const& s) const final { return m_v * s; }
 
   state_type wave_speeds(state_type const& /* s */) const final { return state_type{m_v}; }
@@ -200,7 +205,8 @@ struct LinearAdvection : System<fivo::state<double, 1>> {
 };
 
 /* BURGERS EQUATION */
-struct Burgers : System<fivo::state<double, 1>> {
+struct Burgers : System<fivo::state<double, 1>>,
+                 HasVelocity<fivo::state<double, 1>> {
   using state_type = fivo::state<double, 1>;
   using global_state_type = fivo::global_state<state_type>;
   using value_type = typename state_type::value_type;
@@ -232,6 +238,8 @@ struct Burgers : System<fivo::state<double, 1>> {
       return in_opbound;
     }
   };
+
+  value_type velocity(state_type const& s) const final { return s[0]; }
 
   state_type flux(state_type const& s) const final {
     auto const& u = s[0];
@@ -304,7 +312,6 @@ struct SWE : System<fivo::state<double, 2>>,
     virtual state_type apply(value_type const& /* g */,
                              state_type const& /* s */) const = 0;
   };
-
   struct NoFriction : FrictionModel {
     using FrictionModel::FrictionModel;
     state_type apply(value_type const& g,
@@ -350,8 +357,8 @@ struct SWE : System<fivo::state<double, 2>>,
     : System(mesh, left_bc, right_bc), m_grav(grav), m_fmodel(fmodel)
   {
     // Create empty topography
-    add_topography([](value_type const&) { return 0.; },
-                   [](value_type const&) { return 0.; });
+    topography([](value_type const&) { return 0.; },
+               [](value_type const&) { return 0.; });
   }
 
   value_type m_grav;
@@ -359,8 +366,43 @@ struct SWE : System<fivo::state<double, 2>>,
   std::vector<value_type> m_topo, m_gdz;
 
   auto grav() const { return m_grav; }
+  SWE& grav(value_type const& value) { m_grav = value; return *this; }
   auto friction_model() const { return m_fmodel; }
+  SWE& friction_model(std::shared_ptr<FrictionModel> const& value) { m_fmodel = value; return *this; }
   auto topography() const { return m_topo; }
+  template<typename TopoFunc, typename TopoDxFunc>
+  SWE& topography(TopoFunc&& func, TopoDxFunc&& dfunc) {
+    auto const nx = m_mesh.nx();
+    auto const dx = m_mesh.dx();
+    // Create topo and gdz
+    m_topo.resize(nx);
+    m_gdz.resize(nx);
+    for (int i = 0; i < nx; ++i) {
+      auto const x = m_mesh.xmin() + (i + 0.5) * dx;
+      m_topo[i] = func(x);
+      m_gdz[i] = m_grav * dfunc(x);
+    }
+    return *this;
+  }
+  template<typename TopoFunc>
+  SWE& topography(TopoFunc&& func) {
+    auto const nx = m_mesh.nx();
+    auto const dx = m_mesh.dx();
+    // Create topo
+    m_topo.resize(nx);
+    for (int i = 0; i < nx; ++i) {
+      auto const x = m_mesh.xmin() + (i + 0.5) * dx;
+      m_topo[i] = func(x);
+    }
+    // Create gdz
+    m_gdz.resize(nx);
+    m_gdz[0] = m_grav * (-3 * m_topo[0] + 4 * m_topo[1] - m_topo[2]) / (2 * dx);
+    for (int i = 1; i < nx - 1; ++i) {
+      m_gdz[i] = m_grav * (m_topo[i+1] - m_topo[i-1]) / (2 * dx);
+    }
+    m_gdz[nx - 1] = m_grav * (3 * m_topo[nx-1] - 4 * m_topo[nx-2] + m_topo[nx-3]) / (2 * dx);
+    return *this;
+  }
 
   value_type velocity(state_type const& s) const final { return s[1] / s[0]; }
 
@@ -384,39 +426,6 @@ struct SWE : System<fivo::state<double, 2>>,
       S[i] = state_type{0., - m_gdz[i] * X[i][0]} + m_fmodel->apply(m_grav, X[i]);
     }
     return S;
-  }
-
-  template<typename TopoFunc, typename TopoDxFunc>
-  void add_topography(TopoFunc&& func, TopoDxFunc&& dfunc) {
-    auto const nx = m_mesh.nx();
-    auto const dx = m_mesh.dx();
-    // Create topo and gdz
-    m_topo.resize(nx);
-    m_gdz.resize(nx);
-    for (int i = 0; i < nx; ++i) {
-      auto const x = m_mesh.xmin() + (i + 0.5) * dx;
-      m_topo[i] = func(x);
-      m_gdz[i] = m_grav * dfunc(x);
-    }
-  }
-
-  template<typename TopoFunc>
-  void add_topography(TopoFunc&& func) {
-    auto const nx = m_mesh.nx();
-    auto const dx = m_mesh.dx();
-    // Create topo
-    m_topo.resize(nx);
-    for (int i = 0; i < nx; ++i) {
-      auto const x = m_mesh.xmin() + (i + 0.5) * dx;
-      m_topo[i] = func(x);
-    }
-    // Create gdz
-    m_gdz.resize(nx);
-    m_gdz[0] = m_grav * (-3 * m_topo[0] + 4 * m_topo[1] - m_topo[2]) / (2 * dx);
-    for (int i = 1; i < nx - 1; ++i) {
-      m_gdz[i] = m_grav * (m_topo[i+1] - m_topo[i-1]) / (2 * dx);
-    }
-    m_gdz[nx - 1] = m_grav * (3 * m_topo[nx-1] - 4 * m_topo[nx-2] + m_topo[nx-3]) / (2 * dx);
   }
 };
 
@@ -459,6 +468,9 @@ struct IdealGasEuler : System<fivo::state<double, 3>>,
     : System(mesh, left_bc, right_bc), m_gamma(gamma) {}
 
   value_type m_gamma;
+
+  auto gamma() const { return m_gamma; }
+  IdealGasEuler& gamma(value_type const& value) { m_gamma = value; return *this; }
 
   value_type velocity(state_type const& s) const final { return s[1] / s[0]; }
 
@@ -530,6 +542,11 @@ struct StiffenedGasEuler : System<fivo::state<double, 3>>,
 
   value_type m_gamma;
   value_type m_p0;
+
+  auto gamma() const { return m_gamma; }
+  auto p0() const { return m_p0; }
+  StiffenedGasEuler& gamma(value_type const& value) { m_gamma = value; return *this; }
+  StiffenedGasEuler& p0(value_type const& value) { m_p0 = value; return *this; }
 
   value_type velocity(state_type const& s) const final { return s[1] / s[0]; }
 

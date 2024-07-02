@@ -63,21 +63,21 @@ struct array {
 
   // Arithmetic operators
   auto& operator+=(array<T, N> const& rhs) {
-    for (int i = 0; i < N; ++i) storage[i] += rhs[i];
+    for (size_type i = 0; i < N; ++i) storage[i] += rhs[i];
     return *this;
   }
   auto& operator-=(array<T, N> const& rhs) {
-    for (int i = 0; i < N; ++i) storage[i] -= rhs[i];
+    for (size_type i = 0; i < N; ++i) storage[i] -= rhs[i];
     return *this;
   }
   template<typename Scalar>
   auto& operator*=(Scalar const& factor) {
-    for (int i = 0; i < N; ++i) storage[i] *= factor;
+    for (size_type i = 0; i < N; ++i) storage[i] *= factor;
     return *this;
   }
   template<typename Scalar>
   auto& operator/=(Scalar const& factor) {
-    for (int i = 0; i < N; ++i) storage[i] /= factor;
+    for (size_type i = 0; i < N; ++i) storage[i] /= factor;
     return *this;
   }
 };
@@ -90,7 +90,7 @@ array<T, N> operator+(array<T, N> const& in) {
 template<typename T, std::size_t N>
 array<T, N> operator-(array<T, N> const& in) {
   array<T, N> out;
-  for (int i = 0; i < N; ++i) out[i] = -in[i];
+  for (typename array<T, N>::size_type i = 0; i < N; ++i) out[i] = -in[i];
   return out;
 }
 

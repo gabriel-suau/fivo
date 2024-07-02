@@ -17,12 +17,15 @@ int main(int argc, char** argv) {
 
   // Initial value = gaussian
   auto const init = [&] (double const& x) { return state_type{std::exp(-0.5 * x * x)}; };
+  auto X = system.create_init_state(mesh, init);
+
+  // Output quantities
+  auto const u = [&] (double const&, state_type const& s) { return s[0]; };
 
   // Solve and save for each numerical flux
   fivo::IOManager io("burgers_rusanov", 10, mesh);
-  auto X = system.create_init_state(mesh, init);
-  fivo::solve(io, mesh, system, fivo::Rusanov{}, fivo::EulerStep{}, X, t0, tf, dt);
+  fivo::solve(io, system, fivo::Rusanov{}, fivo::EulerStep{}, X, t0, tf, dt, u);
   io.basename("burgers_hll");
   X = system.create_init_state(mesh, init);
-  fivo::solve(io, mesh, system, fivo::HLL{}, fivo::EulerStep{}, X, t0, tf, dt);
+  fivo::solve(io, system, fivo::HLL{}, fivo::EulerStep{}, X, t0, tf, dt, u);
 }

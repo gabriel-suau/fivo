@@ -16,32 +16,32 @@ using global_state = std::vector<State>;
 
 template<typename State>
 auto& operator+=(fivo::global_state<State>& lhs, fivo::global_state<State> const& rhs) {
-  for (int i = 0; i < lhs.size(); ++i) lhs[i] += rhs[i];
+  for (typename fivo::global_state<State>::size_type i = 0; i < lhs.size(); ++i) lhs[i] += rhs[i];
   return lhs;
 }
 
 template<typename State>
 auto& operator-=(fivo::global_state<State>& lhs, fivo::global_state<State> const& rhs) {
-  for (int i = 0; i < lhs.size(); ++i) lhs[i] -= rhs[i];
+  for (typename fivo::global_state<State>::size_type i = 0; i < lhs.size(); ++i) lhs[i] -= rhs[i];
   return lhs;
 }
 
 template<typename State, typename Scalar>
 auto& operator*=(fivo::global_state<State>& lhs, Scalar const& factor) {
-  for (int i = 0; i < lhs.size(); ++i) lhs[i] *= factor;
+  for (typename fivo::global_state<State>::size_type i = 0; i < lhs.size(); ++i) lhs[i] *= factor;
   return lhs;
 }
 
 template<typename State, typename Scalar>
 auto& operator/=(fivo::global_state<State>& lhs, Scalar const& factor) {
-  for (int i = 0; i < lhs.size(); ++i) lhs[i] /= factor;
+  for (typename fivo::global_state<State>::size_type i = 0; i < lhs.size(); ++i) lhs[i] /= factor;
   return lhs;
 }
 
 template<typename State>
 auto operator-(fivo::global_state<State> const& in) {
   fivo::global_state<State> out(in.size());
-  for (int i = 0; i < in.size(); ++i) out[i] = -in[i];
+  for (typename fivo::global_state<State>::size_type i = 0; i < in.size(); ++i) out[i] = -in[i];
   return out;
 }
 
