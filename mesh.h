@@ -18,15 +18,15 @@ struct Mesh {
 
   auto cell_center(int i) const { return xmin() + (i + 0.5) * dx(); }
 
-  auto xmin(double value) {
+  void xmin(double value) {
     m_xmin = value;
     m_dx = (m_xmax - m_xmin) / m_nx;
   }
-  auto xmax(double value) {
+  void xmax(double value) {
     m_xmax = value;
     m_dx = (m_xmax - m_xmin) / m_nx;
   }
-  auto nx(int value) {
+  void nx(int value) {
     m_nx = value;
     m_dx = (m_xmax - m_xmin) / m_nx;
   }

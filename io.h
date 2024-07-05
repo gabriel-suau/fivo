@@ -44,7 +44,7 @@ public:
     std::ofstream file(filename);
     if (!file.is_open()) throw std::runtime_error("Could not open output file " + filename);
     for (int i = 0; i < m_mesh.nx(); ++i) {
-      auto const x = m_mesh.xmin() + (i + 0.5) * m_mesh.dx();
+      auto const x = m_mesh.cell_center(i);
       file << x;
       impl::apply([&] (auto const& q) { file << " " << q(x, X[i]); }, quantities);
       file << "\n";
