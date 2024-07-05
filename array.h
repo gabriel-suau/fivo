@@ -6,11 +6,6 @@
 
 namespace fivo {
 
-template<typename F, std::size_t... Is>
-void cfor(F func, std::index_sequence<Is...>) {
-  (func(Is), ...);
-}
-
 /** ARRAY HELPER */
 template<typename T, std::size_t N>
 struct array {
