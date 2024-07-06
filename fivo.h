@@ -8,5 +8,6 @@
 #include "mesh.h"
 #include "io.h"
 #include "solver.h"
+#include "math.h"
 
 #endif // FIVO_FIVO_H

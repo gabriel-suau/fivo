@@ -4,8 +4,11 @@
 #include <algorithm>
 #include "system.h"
 #include "mesh.h"
+#include "traits.h"
 
 namespace fivo {
+
+namespace flux {
 
 template<typename Derived>
 struct NumericalFlux {
@@ -26,6 +29,15 @@ struct NumericalFlux {
       numflux[i] = compute(sys, state[i-1], state[i]);
     numflux.back() = compute(sys, state.back(), right_bc);
     return numflux;
+  }
+};
+
+struct Godunov : NumericalFlux<Godunov> {
+  auto compute(system::LinearAdvection const& sys,
+               typename system::LinearAdvection::state_type const& left,
+               typename system::LinearAdvection::state_type const& right) const {
+    auto const ws = sys.wave_speeds(left);
+    return (ws[0] > 0) ? sys.flux(left) : sys.flux(right);
   }
 };
 
@@ -68,14 +80,11 @@ struct HLL : NumericalFlux<HLL> {
 };
 
 struct HLLC : NumericalFlux<HLLC> {
-  template<typename System>
+  template<typename System,
+           std::enable_if_t<traits::is_derived<System, system::Euler>::value, bool> = false>
   auto compute(System const& sys,
                typename System::state_type const& left,
-               typename System::state_type const& right) const;
-
-  auto compute(IdealGasEuler const& sys,
-               typename IdealGasEuler::state_type const& left,
-               typename IdealGasEuler::state_type const& right) const {
+               typename System::state_type const& right) const {
     auto const fl = sys.flux(left);
     auto const fr = sys.flux(right);
     auto const wsl = sys.wave_speeds(left);
@@ -98,7 +107,7 @@ struct HLLC : NumericalFlux<HLLC> {
     auto const ur = sys.velocity(right);
     auto const cstar = (pr - pl + rl * ul * (cl - ul) - rr * ur * (cr - ur))
       / (rl * (cl - ul) - rr * (cr - ur));
-    auto const dstar = typename IdealGasEuler::state_type{0, 1, cstar};
+    auto const dstar = typename System::state_type{0, 1, cstar};
     auto const plstar = pl + rl * (cl - ul) * (cstar - ul);
     auto const ulstar = (cl * left  - fl + plstar * dstar) / (cl - cstar);
     auto const flstar = fl + cl * (ulstar - left);
@@ -109,6 +118,8 @@ struct HLLC : NumericalFlux<HLLC> {
     return frstar;
   }
 };
+
+} // namespace flux
 
 } // namespace fivo
 
