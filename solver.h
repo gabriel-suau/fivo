@@ -45,7 +45,12 @@ void solve(IOManager const& io, System const& system, NumFlux const& numflux,
                    };
 
   while (t < tf) {
-    auto const step = ((t + dt) <= tf) ? dt : (tf - t);
+    // Adjust time step to ensure CFL condition is met
+    auto const max_ws = system.max_wave_speed(X);
+    auto step = std::min(dt, mesh.dx() / max_ws);
+    // auto step = dt;
+    step = ((t + step) <= tf) ? step : (tf - t);
+    // Do one step
     step_impl(X, t, step, rhs);
     ++niter;
     if (niter % io.save_frequency() == 0) io.save_state(t, niter, X, quantities);
