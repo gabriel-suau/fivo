@@ -34,4 +34,7 @@ int main(int argc, char** argv) {
   io.basename("traffic_hll");
   X = system.create_init_state(mesh, init);
   fivo::solve(io, system, fivo::flux::HLL{}, fivo::time::RK1{}, X, t0, tf, dt, quantities);
+  io.basename("traffic_godunov");
+  X = system.create_init_state(mesh, init);
+  fivo::solve(io, system, fivo::flux::Godunov{}, fivo::time::RK1{}, X, t0, tf, dt, quantities);
 }

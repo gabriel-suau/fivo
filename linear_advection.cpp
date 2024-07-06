@@ -7,6 +7,7 @@ int main(int argc, char** argv) {
 
   auto mesh = fivo::Mesh(-5., 5., 100);
 
+  // Exactly meet the CFL condition
   double const dt = mesh.dx() / v;
 
   // Boundary conditions
@@ -25,9 +26,12 @@ int main(int argc, char** argv) {
   auto const u = [&] (double const&, state_type const& s) { return s[0]; };
 
   // Solve and save for each numerical flux
-  auto io = fivo::IOManager("advection_rusanov", 10, mesh);
+  auto io = fivo::IOManager("advection_rusanov", 1, mesh);
   fivo::solve(io, system, fivo::flux::Rusanov{}, fivo::time::RK1{}, X, t0, tf, dt, u);
   io.basename("advection_hll");
   X = system.create_init_state(mesh, init);
   fivo::solve(io, system, fivo::flux::HLL{}, fivo::time::RK1{}, X, t0, tf, dt, u);
+  io.basename("advection_godunov");
+  X = system.create_init_state(mesh, init);
+  fivo::solve(io, system, fivo::flux::Godunov{}, fivo::time::RK1{}, X, t0, tf, dt, u);
 }

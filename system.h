@@ -5,6 +5,7 @@
 #include "mesh.h"
 #include "vector.h"
 #include "math.h"
+#include "traits.h"
 
 #include <cmath>
 #include <algorithm>
@@ -172,6 +173,31 @@ struct HasBC {
   std::shared_ptr<BC> m_left_bc, m_right_bc;
 };
 
+template<typename System, typename State>
+struct HasRiemannSolver {
+  using state_type = State;
+  using global_state_type = fivo::global_state<State>;
+  using value_type = typename state_type::value_type;
+
+  auto solve_riemann(state_type const& left, state_type const& right) const {
+    return static_cast<System const*>(this)->solve_riemann(left, right);
+  }
+};
+
+} // namespace system
+
+namespace traits {
+
+template<typename System>
+struct has_riemann_solver {
+  static constexpr bool value =
+    traits::is_derived<System, system::HasRiemannSolver<System, typename System::state_type>>::value;
+};
+
+} // namespace traits
+
+namespace system {
+
 template<typename State>
 struct System : HasMesh, HasFlux<State>, HasWaveSpeed<State>, HasAdmissible<State>, HasInitState<State>, HasSource<State>, HasBC<State> {
   using state_type = State;
@@ -186,7 +212,8 @@ struct System : HasMesh, HasFlux<State>, HasWaveSpeed<State>, HasAdmissible<Stat
 /* LINEAR ADVECTION EQUATION */
 struct LinearAdvection : System<fivo::state<double, 1>>,
                          HasDensity<fivo::state<double, 1>>,
-                         HasVelocity<fivo::state<double, 1>> {
+                         HasVelocity<fivo::state<double, 1>>,
+                         HasRiemannSolver<LinearAdvection, fivo::state<double, 1>> {
   using state_type = fivo::state<double, 1>;
   using global_state_type = fivo::global_state<state_type>;
   using value_type = typename state_type::value_type;
@@ -235,12 +262,17 @@ struct LinearAdvection : System<fivo::state<double, 1>>,
   state_type wave_speeds(state_type const& /* s */) const override { return state_type{m_v}; }
 
   bool admissible(state_type const&) const override { return true; }
+
+  auto solve_riemann(state_type const& left, state_type const& right) const {
+    return [&] (value_type const&) { return  (m_v > 0) ? left : right; };
+  }
 };
 
 /* LWR MODEL FOR TRAFFIC FLOW */
 struct LWRTrafficFlow : System<fivo::state<double, 1>>,
                         HasDensity<fivo::state<double, 1>>,
-                        HasVelocity<fivo::state<double, 1>> {
+                        HasVelocity<fivo::state<double, 1>>,
+                        HasRiemannSolver<LWRTrafficFlow, fivo::state<double, 1>> {
   using state_type = fivo::state<double, 1>;
   using global_state_type = fivo::global_state<state_type>;
   using value_type = typename state_type::value_type;
@@ -296,11 +328,34 @@ struct LWRTrafficFlow : System<fivo::state<double, 1>>,
   }
 
   bool admissible(state_type const& s) const override { return (s[0] > 0 && s[0] < m_rmax); }
+
+  auto solve_riemann(state_type const& left, state_type const& right) const {
+    auto const& rl = left[0];
+    auto const& rr = right[0];
+    auto const wl = wave_speeds(left)[0];
+    auto const wr = wave_speeds(right)[0];
+    // Rankine-Hugoniot condition for shocks
+    auto const s = m_umax * (1 - (rl + rr) / m_rmax);
+    auto const fpinv =
+      [=] (value_type const& xi) { return state_type{(m_rmax / 2) * (1 - m_umax * xi)}; };
+    // Solution of the Riemann problem
+    auto exact = [=] (value_type const& xi) {
+                   // Shock (concave flux)
+                   if (rl < rr) { return (xi < s) ? left : right; }
+                   // Rarefaction
+                   if (xi < wl) return left;
+                   if (xi > wr) return right;
+                   return fpinv(xi);
+                 };
+    return exact;
+  }
+
 };
 
 /* BURGERS EQUATION */
 struct Burgers : System<fivo::state<double, 1>>,
-                 HasVelocity<fivo::state<double, 1>> {
+                 HasVelocity<fivo::state<double, 1>>,
+                 HasRiemannSolver<Burgers, fivo::state<double, 1>> {
   using state_type = fivo::state<double, 1>;
   using global_state_type = fivo::global_state<state_type>;
   using value_type = typename state_type::value_type;
@@ -343,6 +398,27 @@ struct Burgers : System<fivo::state<double, 1>>,
   state_type wave_speeds(state_type const& s) const override { return s; }
 
   bool admissible(state_type const&) const override { return true; }
+
+  auto solve_riemann(state_type const& left, state_type const& right) const {
+    auto const& ul = left[0];
+    auto const& ur = right[0];
+    auto const wl = wave_speeds(left)[0];
+    auto const wr = wave_speeds(right)[0];
+    // Rankine-Hugoniot condition for shocks
+    auto const s = 0.5 * (ul + ur);
+    // (f')^{-1}(xi)
+    auto const fpinv = [=] (value_type const& xi) { return state_type{xi}; };
+    // Solution of the Riemann problem
+    auto exact = [=] (value_type const& xi) {
+                   // Shock (convex flux)
+                   if (ul > ur) { return (xi < s) ? left : right; }
+                   // Rarefaction
+                   if (xi < wl) return left;
+                   if (xi > wr) return right;
+                   return fpinv(xi);
+                 };
+    return exact;
+  }
 };
 
 /* LINEAR ACOUSTICS EQUATIONS : PRESSURE-VELOCITY FORMULATION */
@@ -383,12 +459,12 @@ struct LinearAcousticsPressure : System<fivo::state<double, 2>>,
   LinearAcousticsPressure(Mesh const& mesh,
                           std::shared_ptr<BC> const& left_bc,
                           std::shared_ptr<BC> const& right_bc,
-                          value_type const& r0,
                           value_type const& c,
+                          value_type const& r0,
                           value_type const& u0 = 0)
-    : System(mesh, left_bc, right_bc), m_r0(r0), m_c(c), m_u0(u0) {}
+    : System(mesh, left_bc, right_bc), m_c(c), m_r0(r0), m_u0(u0) {}
 
-  value_type m_r0, m_c, m_u0;
+  value_type m_c, m_r0, m_u0;
 
   value_type density(state_type const& s) const override { return s[0] / (m_c * m_c); }
   value_type pressure(state_type const& s) const override { return s[0]; }
@@ -444,12 +520,12 @@ struct LinearAcousticsDensity : System<fivo::state<double, 2>>,
   LinearAcousticsDensity(Mesh const& mesh,
                          std::shared_ptr<BC> const& left_bc,
                          std::shared_ptr<BC> const& right_bc,
-                         value_type const& r0,
                          value_type const& c,
+                         value_type const& r0,
                          value_type const& u0 = 0)
-    : System(mesh, left_bc, right_bc), m_r0(r0), m_c(c), m_u0(u0) {}
+    : System(mesh, left_bc, right_bc), m_c(c), m_r0(r0), m_u0(u0) {}
 
-  value_type m_r0, m_c, m_u0;
+  value_type m_c, m_r0, m_u0;
 
   value_type density(state_type const& s) const override { return s[0]; }
   value_type pressure(state_type const& s) const override { return m_c * m_c * s[0]; }

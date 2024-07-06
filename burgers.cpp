@@ -2,7 +2,7 @@
 
 int main(int argc, char** argv) {
   double const t0 = 0;
-  double const tf = 5.0;
+  double const tf = 10.0;
   double const dt = 1e-2;
 
   auto mesh = fivo::Mesh(-10., 10., 500);
@@ -28,4 +28,7 @@ int main(int argc, char** argv) {
   io.basename("burgers_hll");
   X = system.create_init_state(mesh, init);
   fivo::solve(io, system, fivo::flux::HLL{}, fivo::time::RK1{}, X, t0, tf, dt, u);
+  io.basename("burgers_godunov");
+  X = system.create_init_state(mesh, init);
+  fivo::solve(io, system, fivo::flux::Godunov{}, fivo::time::RK1{}, X, t0, tf, dt, u);
 }

@@ -10,19 +10,55 @@ namespace fivo {
 
 namespace flux {
 
+/**
+ * \brief Base class template for numerical fluxes.
+ *
+ * \tparam Derived Type of the derived flux class (for CRTP)
+ */
 template<typename Derived>
 struct NumericalFlux {
+
+  /**
+   * \brief Compute the numerical flux given a system and two states.
+   *
+   * \tparam System Type of the system
+   *
+   * \param[in] sys    System object for which to compute the numerical flux
+   * \param[in] left   Left cell state
+   * \param[in] right  Right cell state
+   * \return Numerical flux computed using the \tparam Derived implementation
+   *
+   * The numerical flux is computed using the input system \a sys and the two
+   * input states \a left and \a right.
+   */
   template<typename System>
   auto compute(System const& sys,
                typename System::state_type const& left,
                typename System::state_type const& right) const {
     return static_cast<Derived const*>(this)->compute(sys, left, right);
   }
+
+  /**
+   * \brief Compute the numerical fluxes given a system, a global state and two
+   * boundary conditions.
+   *
+   * \tparam System Type of the system
+   *
+   * \param[in] sys      System object for which to compute the numerical flux
+   * \param[in] left_bc  State of the left boundary ghost-cell
+   * \param[in] right_bc State of the right boundary ghost-cell
+   * \param[in] state    Global state inside the domain
+   * \return Numerical fluxes on the edges of the mesh contained in \a sys
+   * computed using the \tparam Derived implementation.
+   *
+   * The numerical flux is also computed on the boundary edges using the
+   * ghost-cell values \a left_bc and \a right_bc.
+   */
   template<typename System>
   auto gcompute(System const& sys,
-                typename System::state_type const& left_bc,
-                typename System::state_type const& right_bc,
-                typename System::global_state_type const& state) const {
+               typename System::state_type const& left_bc,
+               typename System::state_type const& right_bc,
+               typename System::global_state_type const& state) const {
     typename System::global_state_type numflux(state.size() + 1);
     numflux[0] = compute(sys, left_bc, state.front());
     for (std::size_t i = 1; i < numflux.size() - 1; ++i)
@@ -30,17 +66,41 @@ struct NumericalFlux {
     numflux.back() = compute(sys, state.back(), right_bc);
     return numflux;
   }
+
 };
 
-struct Godunov : NumericalFlux<Godunov> {
+/**
+ * \brief Upwind numerical flux (only for \ref LinearAdvection).
+ *
+ * The results should match exactly those computed with \ref Godunov
+ */
+struct Upwind : NumericalFlux<Upwind> {
   auto compute(system::LinearAdvection const& sys,
                typename system::LinearAdvection::state_type const& left,
                typename system::LinearAdvection::state_type const& right) const {
-    auto const ws = sys.wave_speeds(left);
-    return (ws[0] > 0) ? sys.flux(left) : sys.flux(right);
+    auto const v = sys.velocity();
+    return (v > 0) ? sys.flux(left) : sys.flux(right);
   }
 };
 
+/**
+ * \brief Godunov numerical flux.
+ */
+struct Godunov : NumericalFlux<Godunov> {
+  template<typename System>
+  auto compute(System const& sys,
+               typename System::state_type const& left,
+               typename System::state_type const& right) const {
+    static_assert(traits::has_riemann_solver<System>::value,
+                  "fivo::flux::Godunov::compute : input system goes not have an exact Riemann solver.");
+    auto exact = sys.solve_riemann(left, right);
+    return sys.flux(exact(0));
+  }
+};
+
+/**
+ * \brief Rusanov numerical flux.
+ */
 struct Rusanov : NumericalFlux<Rusanov> {
   template<typename System>
   auto compute(System const& sys,
@@ -58,6 +118,9 @@ struct Rusanov : NumericalFlux<Rusanov> {
   }
 };
 
+/**
+ * \brief HLL numerical flux.
+ */
 struct HLL : NumericalFlux<HLL> {
   template<typename System>
   auto compute(System const& sys,
@@ -79,6 +142,9 @@ struct HLL : NumericalFlux<HLL> {
   }
 };
 
+/**
+ * \brief HLLC numerical flux.
+ */
 struct HLLC : NumericalFlux<HLLC> {
   template<typename System,
            std::enable_if_t<traits::is_derived<System, system::Euler>::value, bool> = false>

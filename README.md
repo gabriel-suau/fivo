@@ -148,6 +148,8 @@ Next, you have to define at least one boundary condition type for your system. T
 ## Numerical fluxes
 
 Several numerical fluxes are already implemented in fivo, they are available in the `fivo::flux` namespace :
+- `Upwind` for `LinearAdvection`
+- `Godunov` for systems that implement exact Riemann solvers
 - `Rusanov` for all systems
 - `HLL` for all systems
 - `HLLC` for systems derived from `Euler`

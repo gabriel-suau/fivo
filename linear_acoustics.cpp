@@ -17,7 +17,7 @@ int main(int argc, char** argv) {
   auto right_bc = fivo::system::LinearAcousticsPressure::BCNeumann::make();
 
   // Create the system
-  auto system = fivo::system::LinearAcousticsPressure(mesh, left_bc, right_bc, r0, c, u0);
+  auto system = fivo::system::LinearAcousticsPressure(mesh, left_bc, right_bc, c, r0, u0);
   using state_type = typename fivo::system::LinearAcousticsPressure::state_type;
 
   // Initial value : p = gaussian, u = 0
