@@ -23,15 +23,21 @@ Several systems are already implemented in fivo, they are available in the `fivo
 $$ U = c \qquad F(U) = ac \qquad S(U) = 0 $$
 
 - `LWRTrafficFlow`: LWR model for traffic flow
-$$ U = \rho \qquad F(U) = \rho u(\rho) \qquad S(U) = 0 $$
-with EOS $u(\rho) = u_m(1 - \frac{\rho}{\rho_m}$ where $\rho_m$ and $u_m$ are the maximum density and velocity.
+  ```math
+  U = \rho \qquad F(U) = \rho u(\rho) \qquad S(U) = 0
+  ```
+  with EOS $u(\rho) = u_m(1 - \frac{\rho}{\rho_m}$ where $\rho_m$ and $u_m$ are the maximum density and velocity.
 
 - `Burgers`: inviscid Burgers equation
-$$ U = u \qquad F(U) = \frac{u^2}{2} \qquad S(U) = 0 $$
+  ```math
+  U = u \qquad F(U) = \frac{u^2}{2} \qquad S(U) = 0
+  ```
 
 - `LinearAcousticsPressure`: pressure-velocity formulation of the linear acoustics equations
-$$ U = \begin{pmatrix} p \\ u \end{pmatrix} \qquad F(U) = \begin{pmatrix} u_0 & \rho_0 c^2 \\ \frac{1}{\rho_0} & u_0 \end{pmatrix} U \qquad S(U) = \begin{pmatrix} 0 \\ 0 \end{pmatrix} $$
-with EOS $p(\rho) = \rho c^2$ where $c$ is the speed of sound.
+  ```math
+  U = \begin{pmatrix} p \\ u \end{pmatrix} \qquad F(U) = \begin{pmatrix} u_0 & \rho_0 c^2 \\ \frac{1}{\rho_0} & u_0 \end{pmatrix} U \qquad S(U) = \begin{pmatrix} 0 \\ 0 \end{pmatrix}
+  ```
+  with EOS $p(\rho) = \rho c^2$ where $c$ is the speed of sound.
 
 - `LinearAcousticsDensity`: density-velocity formulation of the linear acoustics equations
 $$ U = \begin{pmatrix} p \\ u \end{pmatrix} \qquad F(U) = \begin{pmatrix} u_0 & \rho_0 \\ c^2 & u_0 \end{pmatrix} U \qquad S(U) = \begin{pmatrix} 0 \\ 0 \end{pmatrix} $$
