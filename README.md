@@ -20,7 +20,9 @@ where $U$ is the vector of conservative variables, $F$ is the flux function and 
 
 Several systems are already implemented in fivo, they are available in the `fivo::system` namespace :
 - `LinearAdvection`: advection with constant velocity $a$
-$$ U = c \qquad F(U) = ac \qquad S(U) = 0 $$
+  ```math
+  U = c \qquad F(U) = ac \qquad S(U) = 0 $$
+  ```
 
 - `LWRTrafficFlow`: LWR model for traffic flow
   ```math
@@ -40,26 +42,36 @@ $$ U = c \qquad F(U) = ac \qquad S(U) = 0 $$
   with EOS $p(\rho) = \rho c^2$ where $c$ is the speed of sound.
 
 - `LinearAcousticsDensity`: density-velocity formulation of the linear acoustics equations
-$$ U = \begin{pmatrix} p \\ u \end{pmatrix} \qquad F(U) = \begin{pmatrix} u_0 & \rho_0 \\ c^2 & u_0 \end{pmatrix} U \qquad S(U) = \begin{pmatrix} 0 \\ 0 \end{pmatrix} $$
-with EOS $p(\rho) = \rho c^2$ where $c$ is the speed of sound.
+  ```math
+  U = \begin{pmatrix} p \\ u \end{pmatrix} \qquad F(U) = \begin{pmatrix} u_0 & \rho_0 \\ c^2 & u_0 \end{pmatrix} U \qquad S(U) = \begin{pmatrix} 0 \\ 0 \end{pmatrix}
+  ```
+  with EOS $p(\rho) = \rho c^2$ where $c$ is the speed of sound.
 
 - `SWE`: shallow-water equations
-$$ U = \begin{pmatrix} h \\ hu \end{pmatrix} \qquad F(U) = \begin{pmatrix} hu \\ hu^2 + \frac{gh^2}{2} \end{pmatrix} \qquad S(U) = \begin{pmatrix} 0 \\ -gh\partial_x z \end{pmatrix} $$
-where $g$ is the gravity acceleration and $z$ is the bed elevation.
+  ```math
+  U = \begin{pmatrix} h \\ hu \end{pmatrix} \qquad F(U) = \begin{pmatrix} hu \\ hu^2 + \frac{gh^2}{2} \end{pmatrix} \qquad S(U) = \begin{pmatrix} 0 \\ -gh\partial_x z \end{pmatrix}
+  ```
+  where $g$ is the gravity acceleration and $z$ is the bed elevation.
 
 - `IsentropicEuler`: simplification of Euler's equations for gas dynamics for isentropic systems
-$$ U = \begin{pmatrix} \rho \\ \rho u \end{pmatrix} \qquad F(U) = \begin{pmatrix} \rho u \\ \rho u^2 + p \end{pmatrix} \qquad S(U) = \begin{pmatrix} 0 \\ 0 \end{pmatrix} $$
-with EOS $p(\rho) = \kappa \rho^\gamma$, where $\gamma = \frac{c_p}{c_v}$ is the adiabatic index and $\kappa$ a constant.
+  ```math
+  U = \begin{pmatrix} \rho \\ \rho u \end{pmatrix} \qquad F(U) = \begin{pmatrix} \rho u \\ \rho u^2 + p \end{pmatrix} \qquad S(U) = \begin{pmatrix} 0 \\ 0 \end{pmatrix}
+  ```
+  with EOS $p(\rho) = \kappa \rho^\gamma$, where $\gamma = \frac{c_p}{c_v}$ is the adiabatic index and $\kappa$ a constant.
 
 - `IsothermalEuler`: simplification of Euler's equations for gas dynamics for isothermal systems
-$$ U = \begin{pmatrix} \rho \\ \rho u \end{pmatrix} \qquad F(U) = \begin{pmatrix} \rho u \\ \rho u^2 + p \end{pmatrix} \qquad S(U) = \begin{pmatrix} 0 \\ 0 \end{pmatrix} $$
-with EOS $p(\rho) = \kappa \rho^\gamma$, where $\gamma = \frac{c_p}{c_v}$ is the adiabatic index and $\kappa$ a constant.
+  ```math
+  U = \begin{pmatrix} \rho \\ \rho u \end{pmatrix} \qquad F(U) = \begin{pmatrix} \rho u \\ \rho u^2 + p \end{pmatrix} \qquad S(U) = \begin{pmatrix} 0 \\ 0 \end{pmatrix}
+  ```
+  with EOS $p(\rho) = \kappa \rho^\gamma$, where $\gamma = \frac{c_p}{c_v}$ is the adiabatic index and $\kappa$ a constant.
 
 - `Euler`: Euler's equations for gas dynamics
-$$ U = \begin{pmatrix} \rho \\ \rho u \\ \epsilon \end{pmatrix} \qquad F(U) = \begin{pmatrix} \rho u \\ \rho u^2 + p \\ u(\epsilon + p) \end{pmatrix} \qquad S(U) = \begin{pmatrix} 0 \\ 0 \end{pmatrix} $$
-This is an abstract class that has a pure virtual method to compute the pressure (EOS). At the moment, two derived classes are implemented :
-    - `IdealGasEuler`: $p(\rho) = e(\gamma - 1)$, where $\gamma = \frac{c_p}{c_v}$ is the adiabatic index and $e = \epsilon - \frac{\rho u^2}{2}$ is the internal energy per unit volume ($\epsilon$ is the total energy per unit volume)
-    - `StiffenedGasEuler`: $p(\rho) = e(\gamma - 1) - \gamma p_0$, where $p_0$ is a pressure correction term that accounts for the additional internal pressure due to molecular interactions.
+  ```math
+  U = \begin{pmatrix} \rho \\ \rho u \\ \epsilon \end{pmatrix} \qquad F(U) = \begin{pmatrix} \rho u \\ \rho u^2 + p \\ u(\epsilon + p) \end{pmatrix} \qquad S(U) = \begin{pmatrix} 0 \\ 0 \end{pmatrix}
+  ```
+  This is an abstract class that has a pure virtual method to compute the pressure (EOS). At the moment, two derived classes are implemented :
+  - `IdealGasEuler`: $p(\rho) = e(\gamma - 1)$, where $\gamma = \frac{c_p}{c_v}$ is the adiabatic index and $e = \epsilon - \frac{\rho u^2}{2}$ is the internal energy per unit volume ($\epsilon$ is the total energy per unit volume)
+  - `StiffenedGasEuler`: $p(\rho) = e(\gamma - 1) - \gamma p_0$, where $p_0$ is a pressure correction term that accounts for the additional internal pressure due to molecular interactions.
 
 ## Adding a new system
 
