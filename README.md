@@ -126,16 +126,16 @@ struct NewSystem : fivo::system::System<state_type> {
             /* optional arguments (needed internally for instance) */)
     : fivo::system::System(mesh, left_bc, right_bc), ... 
   {}
-  
+
   /* Define the physical flux, wave speeds and the admissible state space */
-  state_type flux(state_type const& s) const final { /*...*/; }
-  state_type wave_speeds(state_type const& s) const final { /*...*/; }
-  bool admissible(state_type const& s) const final { /*...*/; }
+  state_type flux(state_type const& s) const override { /*...*/; }
+  state_type wave_speeds(state_type const& s) const override { /*...*/; }
+  bool admissible(state_type const& s) const override { /*...*/; }
 
   /* Define the global source function /*
   global_state_type source(Mesh const& mesh, 
                            value_type const& t, 
-                           global_state_type const& X) const final {
+                           global_state_type const& X) const override {
     /*...*/;
   }
 };
@@ -143,16 +143,25 @@ struct NewSystem : fivo::system::System<state_type> {
 
 Lets break it down. First, your new struct must always derive from the `fivo::system::System` template struct with the appropriate state type. Also, the three typedefs in the struct are needed for fivo solver to work correctly. 
 
-Next, you have to define at least one boundary condition type for your system. This is done by declaring structs with a `compute` method (with the exact same signature as above). You can define them inside or outside your system struct.
+Next, you have to define at least one boundary condition type for your system. This is done by declaring structs with a `compute` method (with the exact same signature as above). You can define them inside or outside your system struct. A minimal constructor shoud have three argument (a mesh and two boundary conditions), and should call the `fivo::system::System` constructor with them.
+
+A new system should at least implement the `flux`, `wave_speeds` and `admissible` functions that respectively compute the physical flux, the wave speeds (i.e. the eigenvalues of the flux jacobian), and the set of admissible states. Optionnaly, to add a source, it should also override the `source` function (base implementation sets a null source everywhere).
 
 ## Numerical fluxes
 
 Several numerical fluxes are already implemented in fivo, they are available in the `fivo::flux` namespace :
-- `Upwind` for `LinearAdvection`
-- `Godunov` for systems that implement exact Riemann solvers
-- `Rusanov` for all systems
-- `HLL` for all systems
-- `HLLC` for systems derived from `Euler`
+
+| System name               | Upwind | Godunov | Rusanov | HLL | HLLC |
+|:--------------------------|:------:|---------|---------|-----|------|
+| `LinearAdvection`         | Yes    | Yes     | Yes     | Yes | No   |
+| `LWRTrafficflow`          | N/A    | Yes     | Yes     | Yes | No   |
+| `Burgers`                 | N/A    | Yes     | Yes     | Yes | No   |
+| `LinearAcousticsDensity`  | N/A    | No      | Yes     | Yes | No   |
+| `LinearAcousticsPressure` | N/A    | No      | Yes     | Yes | No   |
+| `SWE`                     | N/A    | No      | Yes     | Yes | No   |
+| `IsothermalEuler`         | N/A    | No      | Yes     | Yes | No   |
+| `IsentropicEuler`         | N/A    | No      | Yes     | Yes | No   |
+| `Euler` and derived       | N/A    | No      | Yes     | Yes | Yes  |
 
 ## Adding a new numerical flux
 
