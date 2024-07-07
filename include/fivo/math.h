@@ -2,6 +2,7 @@
 #define FIVO_MATH_H
 
 #include <type_traits>
+#include <cmath>
 
 namespace fivo {
 
@@ -13,8 +14,9 @@ newton_raphson(T const& x0, F&& f, DF&& df, T const& tol) {
   bool converged = false;
   T x = x0, xold = x0;
   while (!converged) {
-    x = xold - f(x) / df(x);
-    auto const dx = 2 * (x - xold) / (x + xold);
+    x = xold - f(xold) / df(xold);
+    auto const dx = 2 * std::abs(x - xold) / (x + xold);
+    xold = x;
     if (dx < tol) converged = true;
   }
   return x;
