@@ -214,9 +214,9 @@ struct LinearAdvection : System<fivo::state<double, 1>>,
                          HasDensity<fivo::state<double, 1>>,
                          HasVelocity<fivo::state<double, 1>>,
                          HasRiemannSolver<LinearAdvection, fivo::state<double, 1>> {
-  using state_type = fivo::state<double, 1>;
-  using global_state_type = fivo::global_state<state_type>;
-  using value_type = typename state_type::value_type;
+  using System::state_type;
+  using System::global_state_type;
+  using System::value_type;
 
   using BC = System<state_type>::BC;
   struct BCWall : BC {
@@ -273,9 +273,9 @@ struct LWRTrafficFlow : System<fivo::state<double, 1>>,
                         HasDensity<fivo::state<double, 1>>,
                         HasVelocity<fivo::state<double, 1>>,
                         HasRiemannSolver<LWRTrafficFlow, fivo::state<double, 1>> {
-  using state_type = fivo::state<double, 1>;
-  using global_state_type = fivo::global_state<state_type>;
-  using value_type = typename state_type::value_type;
+  using System::state_type;
+  using System::global_state_type;
+  using System::value_type;
 
   using BC = System<state_type>::BC;
   struct BCWall : BC {
@@ -356,9 +356,9 @@ struct LWRTrafficFlow : System<fivo::state<double, 1>>,
 struct Burgers : System<fivo::state<double, 1>>,
                  HasVelocity<fivo::state<double, 1>>,
                  HasRiemannSolver<Burgers, fivo::state<double, 1>> {
-  using state_type = fivo::state<double, 1>;
-  using global_state_type = fivo::global_state<state_type>;
-  using value_type = typename state_type::value_type;
+  using System::state_type;
+  using System::global_state_type;
+  using System::value_type;
 
   using BC = System<state_type>::BC;
   struct BCWall : BC {
@@ -427,9 +427,9 @@ struct LinearAcousticsPressure : System<fivo::state<double, 2>>,
                                  HasPressure<fivo::state<double, 2>>,
                                  HasVelocity<fivo::state<double, 2>>,
                                  HasRiemannSolver<LinearAcousticsPressure, fivo::state<double, 2>> {
-  using state_type = fivo::state<double, 2>;
-  using global_state_type = fivo::global_state<state_type>;
-  using value_type = typename state_type::value_type;
+  using System::state_type;
+  using System::global_state_type;
+  using System::value_type;
 
   using BC = System<state_type>::BC;
   struct BCWall : BC {
@@ -507,9 +507,9 @@ struct LinearAcousticsDensity : System<fivo::state<double, 2>>,
                                 HasPressure<fivo::state<double, 2>>,
                                 HasVelocity<fivo::state<double, 2>>,
                                 HasRiemannSolver<LinearAcousticsDensity, fivo::state<double, 2>> {
-  using state_type = fivo::state<double, 2>;
-  using global_state_type = fivo::global_state<state_type>;
-  using value_type = typename state_type::value_type;
+  using System::state_type;
+  using System::global_state_type;
+  using System::value_type;
 
   using BC = System<state_type>::BC;
   struct BCWall : BC {
@@ -584,9 +584,9 @@ struct LinearAcousticsDensity : System<fivo::state<double, 2>>,
 /* SHALLOW WATER EQUATIONS */
 struct SWE : System<fivo::state<double, 2>>,
              HasVelocity<fivo::state<double, 2>> {
-  using state_type = fivo::state<double, 2>;
-  using global_state_type = fivo::global_state<state_type>;
-  using value_type = typename state_type::value_type;
+  using System::state_type;
+  using System::global_state_type;
+  using System::value_type;
 
   /* BOUNDARY CONDITIONS */
   using BC = System<state_type>::BC;
@@ -767,9 +767,9 @@ struct SWE : System<fivo::state<double, 2>>,
 /* TELEGRAPH EQUATIONS */
 struct Telegraph : System<fivo::state<double, 2>>,
                    HasRiemannSolver<Telegraph, fivo::state<double, 2>> {
-  using state_type = fivo::state<double, 2>;
-  using global_state_type = fivo::global_state<state_type>;
-  using value_type = typename state_type::value_type;
+  using System::state_type;
+  using System::global_state_type;
+  using System::value_type;
 
   Telegraph(Mesh const& mesh,
             std::shared_ptr<BC> const& left_bc,
@@ -821,9 +821,9 @@ struct IsentropicEuler : System<fivo::state<double, 2>>,
                          HasDensity<fivo::state<double, 2>>,
                          HasVelocity<fivo::state<double, 2>>,
                          HasPressure<fivo::state<double, 2>> {
-  using state_type = fivo::state<double, 2>;
-  using global_state_type = fivo::global_state<state_type>;
-  using value_type = typename state_type::value_type;
+  using System::state_type;
+  using System::global_state_type;
+  using System::value_type;
 
   /* BOUNDARY CONDITIONS */
   using BC = System<state_type>::BC;
@@ -895,9 +895,9 @@ struct IsothermalEuler : System<fivo::state<double, 2>>,
                          HasDensity<fivo::state<double, 2>>,
                          HasVelocity<fivo::state<double, 2>>,
                          HasPressure<fivo::state<double, 2>> {
-  using state_type = fivo::state<double, 2>;
-  using global_state_type = fivo::global_state<state_type>;
-  using value_type = typename state_type::value_type;
+  using System::state_type;
+  using System::global_state_type;
+  using System::value_type;
 
   /* BOUNDARY CONDITIONS */
   using BC = System<state_type>::BC;
@@ -959,9 +959,9 @@ struct Euler : System<fivo::state<double, 3>>,
                HasDensity<fivo::state<double, 3>>,
                HasVelocity<fivo::state<double, 3>>,
                HasPressure<fivo::state<double, 3>> {
-  using state_type = fivo::state<double, 3>;
-  using global_state_type = fivo::global_state<state_type>;
-  using value_type = typename state_type::value_type;
+  using System::state_type;
+  using System::global_state_type;
+  using System::value_type;
 
   /* BOUNDARY CONDITIONS */
   using BC = System<state_type>::BC;
@@ -1025,139 +1025,159 @@ struct Euler : System<fivo::state<double, 3>>,
 };
 
 /* GENERAL EULER EQUATIONS WITH AN IDEAL GAS EOS */
-struct IdealGasEuler : Euler {
+struct IdealGasEuler : Euler,
+                       HasRiemannSolver<IdealGasEuler, typename Euler::state_type> {
+  using Euler::state_type;
+  using Euler::global_state_type;
+  using Euler::value_type;
   using Euler::Euler;
+
   value_type pressure(state_type const& s) const override {
     auto const& [r, j, e] = s;
     return (m_gamma - 1) * (e - 0.5 * j * j / r);
   }
 
-  // auto solve_riemann(state_type const& left, state_type const& right) const {
-  //   auto const& rl = left[0];
-  //   auto const& rr = right[0];
-  //   auto const pl = pressure(left);
-  //   auto const pr = pressure(right);
-  //   auto const ul = velocity(left);
-  //   auto const ur = velocity(right);
-  //   auto const cl = std::sqrt(m_gamma * pl / rl);
-  //   auto const cr = std::sqrt(m_gamma * pr / rr);
+  value_type energy(state_type const& prim) const {
+    auto const r = prim[0];
+    auto const u = prim[1];
+    auto const p = prim[2];
+    return p / (m_gamma - 1) + 0.5 * r * u * u;
+  }
 
-  //   // Find pstar and ustar in the star region
-  //   auto const Al = 2. / (rl * (m_gamma + 1));
-  //   auto const Ar = 2. / (rr * (m_gamma + 1));
-  //   auto const Bl = pl * (m_gamma - 1) / (m_gamma + 1);
-  //   auto const Br = pr * (m_gamma - 1) / (m_gamma + 1);
-  //   auto const du = ur - ul;
+  state_type prim_to_cons(state_type const& s) const {
+    return state_type{s[0], s[0] * s[1], energy(s)};
+  }
 
-  //   auto const fk =
-  //     [=] (auto const p, auto const pk, auto const ck, auto const Ak, auto const Bk) {
-  //       if (p > pk) return (p - pk) * std::sqrt(Ak / (p + Bk));
-  //       else return 2 * ck / (m_gamma - 1) * (std::pow(p / pk, (m_gamma - 1) / (2 * m_gamma)) - 1);
-  //     };
-  //   auto const dfk =
-  //     [=] (auto const p, auto const pk, auto const rk,
-  //         auto const ck, auto const Ak, auto const Bk) {
-  //       if (p > pk) return std::sqrt(Ak / (Bk + p)) * (1 - (p - pk) / (2 * (Bk + p)));
-  //       else return std::pow(p / pk, - (m_gamma + 1) / (2 * m_gamma)) / (rk * ck);
-  //     };
-  //   auto const fl = [&] (auto const p) { return fk(p, pl, cl, Al, Bl); };
-  //   auto const fr = [&] (auto const p) { return fk(p, pr, cr, Ar, Br); };
-  //   auto const dfl = [&] (auto const p) { return dfk(p, pl, rl, cl, Al, Bl); };
-  //   auto const dfr = [&] (auto const p) { return dfk(p, pr, rr, cr, Ar, Br); };
-  //   auto const f = [&] (auto const p) { return fl(p) + fr(p) + du; };
-  //   auto const df = [&] (auto const p) { return dfl(p) + dfr(p); };
+  state_type cons_to_prim(state_type const& s) const {
+    return state_type{density(s), velocity(s), pressure(s)};
+  }
 
-  //   auto const tol = 1e-6;
-  //   auto const ppv = 0.5 * (pl + pr) - 0.125 * (ur - ul) * (rl + rr) * (cl + cr);
-  //   auto const p0 = std::max(tol, ppv);
+public:
 
-  //   auto const pstar = math::newton_raphson(p0, f, df, tol);
-  //   auto const ustar = 0.5 * ((ul + ur) + fr(pstar) - fl(pstar));
+  auto solve_riemann(state_type const& left, state_type const& right) const {
+    auto const& rl = left[0];
+    auto const& rr = right[0];
+    auto const pl = pressure(left);
+    auto const pr = pressure(right);
+    auto const ul = velocity(left);
+    auto const ur = velocity(right);
+    auto const cl = std::sqrt(m_gamma * pl / rl);
+    auto const cr = std::sqrt(m_gamma * pr / rr);
 
-  //   // Find rl and rr in the star region (rlstar, rrstar)
-  //   value_type rlstar, rrstar, sl, sr;
-  //   value_type shl, stl, clstar;
-  //   value_type shr, str, crstar;
+    // Find pstar and ustar in the star region
+    auto const Al = 2. / (rl * (m_gamma + 1));
+    auto const Ar = 2. / (rr * (m_gamma + 1));
+    auto const Bl = pl * (m_gamma - 1) / (m_gamma + 1);
+    auto const Br = pr * (m_gamma - 1) / (m_gamma + 1);
+    auto const du = ur - ul;
 
-  //   auto const fac = (m_gamma - 1) / (m_gamma + 1);
+    auto const fk =
+      [=] (auto const p, auto const pk, auto const ck, auto const Ak, auto const Bk) {
+        if (p > pk) return (p - pk) * std::sqrt(Ak / (p + Bk));
+        else return 2 * ck / (m_gamma - 1) * (std::pow(p / pk, (m_gamma - 1) / (2 * m_gamma)) - 1);
+      };
+    auto const dfk =
+      [=] (auto const p, auto const pk, auto const rk,
+          auto const ck, auto const Ak, auto const Bk) {
+        if (p > pk) return std::sqrt(Ak / (Bk + p)) * (1 - (p - pk) / (2 * (Bk + p)));
+        else return std::pow(p / pk, - (m_gamma + 1) / (2 * m_gamma)) / (rk * ck);
+      };
+    auto const fl = [&] (auto const p) { return fk(p, pl, cl, Al, Bl); };
+    auto const fr = [&] (auto const p) { return fk(p, pr, cr, Ar, Br); };
+    auto const dfl = [&] (auto const p) { return dfk(p, pl, rl, cl, Al, Bl); };
+    auto const dfr = [&] (auto const p) { return dfk(p, pr, rr, cr, Ar, Br); };
+    auto const f = [&] (auto const p) { return fl(p) + fr(p) + du; };
+    auto const df = [&] (auto const p) { return dfl(p) + dfr(p); };
 
-  //   // Solution left to the contact
-  //   if (pstar > pl) {
-  //     // Shock
-  //     rlstar = rl * (pstar / pl + fac) / ((pstar / pl) * fac + 1);
-  //     sl = ul - cl * std::sqrt(((m_gamma + 1) * pstar / pl + (m_gamma - 1)) / (2 * m_gamma));
-  //   }
-  //   else {
-  //     // Rarefaction
-  //     rlstar = rl * std::pow(pstar / pl, 1 / m_gamma);
-  //     // Fan region
-  //     clstar = cl * std::pow(pstar / pl, (m_gamma - 1) / (2 * m_gamma));
-  //     shl = ul - cl;
-  //     stl = ustar - clstar;
-  //   }
-  //   auto const ruplfan =
-  //     [=] (value_type const& xt) {
-  //       auto const tmp = (2 + (m_gamma - 1) * (ul - xt) / cl) / (m_gamma + 1);
-  //       auto const rlfan = rl * std::pow(tmp, 2 / (m_gamma - 1));
-  //       auto const ulfan = 2 / (m_gamma + 1) * (cl + (m_gamma - 1) * ul / 2 + xt);
-  //       auto const plfan = pl * std::pow(tmp, 2 * m_gamma / (m_gamma - 1));
-  //       return state_type{rlfan, ulfan, plfan};
-  //     };
+    auto const tol = 1e-10;
+    auto const ppv = 0.5 * (pl + pr) - 0.125 * (ur - ul) * (rl + rr) * (cl + cr);
+    auto const p0 = std::max(tol, ppv);
 
-  //   // Right shock (right star)
-  //   if (pstar > pr) {
-  //     rrstar = rr * (pstar / pr + fac) / ((pstar / pr) * fac + 1);
-  //     sr = ur + cr * std::sqrt(((m_gamma + 1) * pstar / pr + (m_gamma - 1)) / (2 * m_gamma));
-  //   }
+    auto const pstar = math::newton_raphson(p0, f, df, tol);
+    auto const ustar = 0.5 * ((ul + ur) + fr(pstar) - fl(pstar));
 
-  //   // Right rarefaction (right star + fan)
-  //   else {
-  //     rrstar = rr * std::pow(pstar / pr, 1 / m_gamma);
-  //     // Fan region
-  //     crstar = cr * std::pow(pstar / pr, (m_gamma - 1) / (2 * m_gamma));
-  //     shr = ur + cr;
-  //     str = ustar + crstar;
-  //   }
-  //   auto const ruprfan =
-  //     [=] (value_type const& xt) {
-  //       auto const tmp = (2 - (m_gamma - 1) * (ur - xt) / cr) / (m_gamma + 1);
-  //       auto const rrfan = rr * std::pow(tmp, 2 / (m_gamma - 1));
-  //       auto const urfan = 2 / (m_gamma + 1) * (-cr + (m_gamma - 1) * ur / 2 + xt);
-  //       auto const prfan = pr * std::pow(tmp, 2 * m_gamma / (m_gamma - 1));
-  //       return state_type{rrfan, urfan, prfan};
-  //     };
+    /* FIND rlstar AND rrstar (density in the star region) */
+    auto const fac = (m_gamma - 1) / (m_gamma + 1);
 
-  //   auto const sol =
-  //     [=] (value_type const& xt) {
-  //       if (xt < ustar) {
-  //         if (pstar > pl) {
-  //           if (xt < sl) return state_type{rl, ul, pl};
-  //           else return state_type{rlstar, ustar, pstar};
-  //         }
-  //         else {
-  //           if (xt < shl) return state_type{rl, ul, pl};
-  //           else if (xt > stl) return state_type{rlstar, ustar, pstar};
-  //           else return ruplfan(xt);
-  //         }
-  //       }
-  //       else {
-  //         if (pstar > pr) {
-  //           if (xt > sr) return state_type{rr, ur, pr};
-  //           else return state_type{rrstar, ustar, pstar};
-  //         }
-  //         else {
-  //           if (xt > shr) return state_type{rr, ur, pr};
-  //           else if (xt < stl) return state_type{rrstar, ustar, pstar};
-  //           else return ruprfan(xt);
-  //         }
-  //       }
-  //     };
-  //   return sol;
-  // }
+    // Solution left of the contact
+    auto const rlstar = (pstar > pl)
+      ? rl * (pstar / pl + fac) / ((pstar / pl) * fac + 1) // left shock
+      : rl * std::pow(pstar / pl, 1 / m_gamma);            // left rarefaction
+
+    // Solution right of the contact
+    auto const rrstar = (pstar > pr)
+      ? rr * (pstar / pr + fac) / ((pstar / pr) * fac + 1) // right shock
+      : rr * std::pow(pstar / pr, 1 / m_gamma);            // right rarefaction
+
+    // Left shock speed
+    auto const sl = ul - cl * std::sqrt(((m_gamma + 1) * pstar / pl + (m_gamma - 1)) / (2 * m_gamma));
+    // Left head and tail rarefaction speeds
+    auto const clstar = cl * std::pow(pstar / pl, (m_gamma - 1) / (2 * m_gamma));
+    auto const shl = ul - cl;
+    auto const stl = ustar - clstar;
+
+    // Right shock speed
+    auto const sr = ur + cr * std::sqrt(((m_gamma + 1) * pstar / pr + (m_gamma - 1)) / (2 * m_gamma));
+    // Right head and tail rarefaction speeds
+    auto const crstar = cr * std::pow(pstar / pr, (m_gamma - 1) / (2 * m_gamma));
+    auto const shr = ur + cr;
+    auto const str = ustar + crstar;
+
+    // Solution in the fan region for left rarefaction
+    auto const ruplfan =
+      [=] (value_type const& xt) {
+        auto const tmp = (2 + (m_gamma - 1) * (ul - xt) / cl) / (m_gamma + 1);
+        auto const rlfan = rl * std::pow(tmp, 2 / (m_gamma - 1));
+        auto const ulfan = 2 / (m_gamma + 1) * (cl + (m_gamma - 1) * ul / 2 + xt);
+        auto const plfan = pl * std::pow(tmp, 2 * m_gamma / (m_gamma - 1));
+        return state_type{rlfan, ulfan, plfan};
+      };
+
+    // Solution in the fan region for right rarefaction
+    auto const ruprfan =
+      [=] (value_type const& xt) {
+        auto const tmp = (2 - (m_gamma - 1) * (ur - xt) / cr) / (m_gamma + 1);
+        auto const rrfan = rr * std::pow(tmp, 2 / (m_gamma - 1));
+        auto const urfan = 2 / (m_gamma + 1) * (-cr + (m_gamma - 1) * ur / 2 + xt);
+        auto const prfan = pr * std::pow(tmp, 2 * m_gamma / (m_gamma - 1));
+        return state_type{rrfan, urfan, prfan};
+      };
+
+    auto const sol =
+      [=] (value_type const& xt) {
+        if (xt < ustar) {
+          if (pstar > pl) {
+            if (xt < sl) return prim_to_cons(state_type{rl, ul, pl});
+            else return prim_to_cons(state_type{rlstar, ustar, pstar});
+          }
+          else {
+            if (xt < shl) return prim_to_cons(state_type{rl, ul, pl});
+            else if (xt > stl) return prim_to_cons(state_type{rlstar, ustar, pstar});
+            else return prim_to_cons(ruplfan(xt));
+          }
+        }
+        else {
+          if (pstar > pr) {
+            if (xt > sr) return prim_to_cons(state_type{rr, ur, pr});
+            else return prim_to_cons(state_type{rrstar, ustar, pstar});
+          }
+          else {
+            if (xt > shr) return prim_to_cons(state_type{rr, ur, pr});
+            else if (xt < str) return prim_to_cons(state_type{rrstar, ustar, pstar});
+            else return prim_to_cons(ruprfan(xt));
+          }
+        }
+      };
+    return sol;
+  }
 };
 
 /* GENERAL EULER EQUATIONS WITH A STIFFENED GAS EOS */
 struct StiffenedGasEuler : Euler {
+  using Euler::state_type;
+  using Euler::global_state_type;
+  using Euler::value_type;
+
   StiffenedGasEuler(Mesh const& mesh, std::shared_ptr<BC> const& left_bc,
                     std::shared_ptr<BC> const& right_bc, value_type const& gamma,
                     value_type const& p0)
@@ -1175,9 +1195,9 @@ struct StiffenedGasEuler : Euler {
 
 /* P1 RADIATIVE TRANSFER EQUATIONS */
 struct RadiativeTransferP1 : System<fivo::state<double, 2>> {
-  using state_type = fivo::state<double, 2>;
-  using global_state_type = fivo::global_state<state_type>;
-  using value_type = typename state_type::value_type;
+  using System::state_type;
+  using System::global_state_type;
+  using System::value_type;
 
   RadiativeTransferP1(Mesh const& mesh, std::shared_ptr<BC> const& left_bc,
             std::shared_ptr<BC> const& right_bc,
@@ -1214,9 +1234,9 @@ struct RadiativeTransferP1 : System<fivo::state<double, 2>> {
 
 /* M1 RADIATIVE TRANSFER EQUATIONS */
 struct RadiativeTransferM1 : System<fivo::state<double, 3>> {
-  using state_type = fivo::state<double, 3>;
-  using global_state_type = fivo::global_state<state_type>;
-  using value_type = typename state_type::value_type;
+  using System::state_type;
+  using System::global_state_type;
+  using System::value_type;
 
   RadiativeTransferM1(Mesh const& mesh, std::shared_ptr<BC> const& left_bc,
             std::shared_ptr<BC> const& right_bc,
