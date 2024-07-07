@@ -1,4 +1,4 @@
-#include "fivo.h"
+#include "../include/fivo/fivo.h"
 
 int main() {
   double const gamma = 1.4;

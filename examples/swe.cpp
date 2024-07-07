@@ -1,4 +1,4 @@
-#include "fivo.h"
+#include "../include/fivo/fivo.h"
 
 int main() {
   double const grav = 9.81;

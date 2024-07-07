@@ -1,4 +1,4 @@
-#include "fivo.h"
+#include "../include/fivo/fivo.h"
 
 int main(int argc, char** argv) {
   double const u0 = 0;

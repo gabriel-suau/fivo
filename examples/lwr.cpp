@@ -1,4 +1,4 @@
-#include "fivo.h"
+#include "../include/fivo/fivo.h"
 
 int main(int argc, char** argv) {
   double const umax = 1.;
@@ -10,17 +10,17 @@ int main(int argc, char** argv) {
   auto mesh = fivo::Mesh(-10., 10., 500);
 
   // Boundary conditions
-  auto left_bc = fivo::system::LWRTrafficFlow::BCWall::make();
+  auto left_bc = fivo::system::LWRTrafficFlow::BCNeumann::make();
   auto right_bc = fivo::system::LWRTrafficFlow::BCNeumann::make();
 
   // Create the system
   auto system = fivo::system::LWRTrafficFlow(mesh, left_bc, right_bc, rhomax, umax);
   using state_type = typename fivo::system::LWRTrafficFlow::state_type;
 
-  // Initial value = gaussian
-  // auto const init = [&] (double const& x) { return state_type{0.9 + 0.1 * std::exp(-0.5 * x * x)}; };
-  auto const init = [&] (double const& x) { return state_type{0.9 - 0.1 * std::exp(-0.5 * x * x)}; };
-  // auto const init = [&] (double const& x) { return state_type{1.}; };
+  // Riemann problem (rarefaction)
+  auto const left = state_type{0.8};
+  auto const right = state_type{0.2};
+  auto const init = [&] (double const& x) { return (x < 0.5 * (mesh.xmin() + mesh.xmax())) ? left : right; };
   auto X = system.create_init_state(mesh, init);
 
   // Output quantities
@@ -37,4 +37,18 @@ int main(int argc, char** argv) {
   io.basename("traffic_godunov");
   X = system.create_init_state(mesh, init);
   fivo::solve(io, system, fivo::flux::Godunov{}, fivo::time::RK1{}, X, t0, tf, dt, quantities);
+
+  // Exact solution
+  auto const exact = system.solve_riemann(left, right);
+  auto Xe = fivo::global_state<state_type>(mesh.nx());
+  io.basename("traffic_exact");
+  int const nt = (tf - t0) / dt;
+  for (int it = 0; it < nt; ++it) {
+    auto const t = t0 + it * dt;
+    for (int i = 0; i < mesh.nx(); ++i) {
+      auto const x = mesh.cell_center(i);
+      Xe[i] = exact(x / t);
+    }
+    if (it % io.save_frequency() == 0) io.save_state(tf, it, Xe, quantities);
+  }
 }
