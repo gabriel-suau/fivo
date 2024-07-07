@@ -765,7 +765,8 @@ struct SWE : System<fivo::state<double, 2>>,
 };
 
 /* TELEGRAPH EQUATIONS */
-struct Telegraph : System<fivo::state<double, 2>> {
+struct Telegraph : System<fivo::state<double, 2>>,
+                   HasRiemannSolver<Telegraph, fivo::state<double, 2>> {
   using state_type = fivo::state<double, 2>;
   using global_state_type = fivo::global_state<state_type>;
   using value_type = typename state_type::value_type;
@@ -804,6 +805,14 @@ struct Telegraph : System<fivo::state<double, 2>> {
                      return m_sigma * state_type{s[1] - s[0], s[0] - s[1]};
                    });
     return src;
+  }
+
+  auto solve_riemann(state_type const& left, state_type const& right) const {
+    auto exact = [&] (value_type const&) {
+                   if (m_velocity > 0) return state_type{left[0], right[1]};
+                   return state_type{left[1], right[0]};
+                 };
+    return exact;
   }
 };
 
