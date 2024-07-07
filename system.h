@@ -337,15 +337,15 @@ struct LWRTrafficFlow : System<fivo::state<double, 1>>,
     // Rankine-Hugoniot condition for shocks
     auto const s = m_umax * (1 - (rl + rr) / m_rmax);
     auto const fpinv =
-      [=] (value_type const& xi) { return state_type{(m_rmax / 2) * (1 - m_umax * xi)}; };
+      [=] (value_type const& xt) { return state_type{(m_rmax / 2) * (1 - m_umax * xt)}; };
     // Solution of the Riemann problem
-    auto exact = [=] (value_type const& xi) {
+    auto exact = [=] (value_type const& xt) {
                    // Shock (concave flux)
-                   if (rl < rr) { return (xi < s) ? left : right; }
+                   if (rl < rr) { return (xt < s) ? left : right; }
                    // Rarefaction
-                   if (xi < wl) return left;
-                   if (xi > wr) return right;
-                   return fpinv(xi);
+                   if (xt < wl) return left;
+                   if (xt > wr) return right;
+                   return fpinv(xt);
                  };
     return exact;
   }
@@ -406,16 +406,16 @@ struct Burgers : System<fivo::state<double, 1>>,
     auto const wr = wave_speeds(right)[0];
     // Rankine-Hugoniot condition for shocks
     auto const s = 0.5 * (ul + ur);
-    // (f')^{-1}(xi)
-    auto const fpinv = [=] (value_type const& xi) { return state_type{xi}; };
+    // (f')^{-1}(xt)
+    auto const fpinv = [=] (value_type const& xt) { return state_type{xt}; };
     // Solution of the Riemann problem
-    auto exact = [=] (value_type const& xi) {
+    auto exact = [=] (value_type const& xt) {
                    // Shock (convex flux)
-                   if (ul > ur) { return (xi < s) ? left : right; }
+                   if (ul > ur) { return (xt < s) ? left : right; }
                    // Rarefaction
-                   if (xi < wl) return left;
-                   if (xi > wr) return right;
-                   return fpinv(xi);
+                   if (xt < wl) return left;
+                   if (xt > wr) return right;
+                   return fpinv(xt);
                  };
     return exact;
   }
