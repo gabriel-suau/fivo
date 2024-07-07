@@ -425,7 +425,8 @@ struct Burgers : System<fivo::state<double, 1>>,
 struct LinearAcousticsPressure : System<fivo::state<double, 2>>,
                                  HasDensity<fivo::state<double, 2>>,
                                  HasPressure<fivo::state<double, 2>>,
-                                 HasVelocity<fivo::state<double, 2>> {
+                                 HasVelocity<fivo::state<double, 2>>,
+                                 HasRiemannSolver<LinearAcousticsPressure, fivo::state<double, 2>> {
   using state_type = fivo::state<double, 2>;
   using global_state_type = fivo::global_state<state_type>;
   using value_type = typename state_type::value_type;
@@ -480,13 +481,32 @@ struct LinearAcousticsPressure : System<fivo::state<double, 2>>,
   }
 
   bool admissible(state_type const&) const override { return true; }
+
+  auto solve_riemann(state_type const& left, state_type const& right) const {
+    auto const& pl = left[0];
+    auto const& ul = left[1];
+    auto const& pr = right[0];
+    auto const& ur = right[1];
+    auto const pstar = 0.5 * (pl + pr - (ur - ul) * (m_r0 * m_c));
+    auto const ustar = 0.5 * (ul + ur - (pr - pl) / (m_r0 * m_c));
+    auto const wr = m_u0 - m_c;
+    auto const wl = m_u0 + m_c;
+    // Solution of the Riemann problem
+    auto exact = [=] (value_type const& xt) {
+                   if (xt < wl) return left;
+                   if (xt > wr) return right;
+                   return state_type{pstar, ustar};
+                 };
+    return exact;
+  }
 };
 
 /* LINEAR ACOUSTICS EQUATIONS : DENSITY-VELOCITY FORMULATION */
 struct LinearAcousticsDensity : System<fivo::state<double, 2>>,
                                 HasDensity<fivo::state<double, 2>>,
                                 HasPressure<fivo::state<double, 2>>,
-                                HasVelocity<fivo::state<double, 2>> {
+                                HasVelocity<fivo::state<double, 2>>,
+                                HasRiemannSolver<LinearAcousticsDensity, fivo::state<double, 2>> {
   using state_type = fivo::state<double, 2>;
   using global_state_type = fivo::global_state<state_type>;
   using value_type = typename state_type::value_type;
@@ -541,6 +561,24 @@ struct LinearAcousticsDensity : System<fivo::state<double, 2>>,
   }
 
   bool admissible(state_type const&) const override { return true; }
+
+  auto solve_riemann(state_type const& left, state_type const& right) const {
+    auto const& rl = left[0];
+    auto const& ul = left[1];
+    auto const& rr = right[0];
+    auto const& ur = right[1];
+    auto const rstar = 0.5 * (rl + rr - (ur - ul) * m_r0 / m_c);
+    auto const ustar = 0.5 * (rl + ur - (rr - rl) * m_c / m_r0);
+    auto const wr = m_u0 - m_c;
+    auto const wl = m_u0 + m_c;
+    // Solution of the Riemann problem
+    auto exact = [=] (value_type const& xt) {
+                   if (xt < wl) return left;
+                   if (xt > wr) return right;
+                   return state_type{rstar, ustar};
+                 };
+    return exact;
+  }
 };
 
 /* SHALLOW WATER EQUATIONS */
