@@ -765,7 +765,6 @@ struct SWE : System<fivo::state<double, 2>>,
 };
 
 /* TELEGRAPH EQUATIONS */
-template<typename Sigma>
 struct Telegraph : System<fivo::state<double, 2>> {
   using state_type = fivo::state<double, 2>;
   using global_state_type = fivo::global_state<state_type>;
@@ -775,17 +774,17 @@ struct Telegraph : System<fivo::state<double, 2>> {
             std::shared_ptr<BC> const& left_bc,
             std::shared_ptr<BC> const& right_bc,
             value_type const& velocity,
-            Sigma const& sigma)
+            value_type const& sigma)
     : System(mesh, left_bc, right_bc), m_velocity(velocity), m_sigma(sigma)
   {}
 
   value_type m_velocity;
-  Sigma m_sigma;
+  value_type m_sigma;
 
   auto velocity() const { return m_velocity; }
   auto sigma() const { return m_sigma; }
   Telegraph& velocity(value_type const& value) { m_velocity = value; return *this; }
-  Telegraph& sigma(Sigma const& value) { m_sigma = value; return *this; }
+  Telegraph& sigma(value_type const& value) { m_sigma = value; return *this; }
 
   state_type flux(state_type const& s) const override {
     return state_type{m_velocity * s[0], -m_velocity * s[1]};
@@ -800,11 +799,10 @@ struct Telegraph : System<fivo::state<double, 2>> {
   global_state_type source(Mesh const& mesh, value_type const& /* t */,
                            global_state_type const& X) const override {
     global_state_type src(mesh.nx());
-    for (int i = 0; i < mesh.nx(); ++i) {
-      auto const x = mesh.cell_center(i);
-      auto const& s = X[i];
-      src[i] = m_sigma(x, s) * state_type{s[1] - s[0], s[0] - s[1]};
-    }
+    std::transform(X.begin(), X.end(), src.begin(),
+                   [&] (auto const& s) {
+                     return m_sigma * state_type{s[1] - s[0], s[0] - s[1]};
+                   });
     return src;
   }
 };
