@@ -533,7 +533,7 @@ struct LinearAcousticsDensity : System<fivo::state<double, 2>>,
 
   state_type flux(state_type const& s) const override {
     return {m_u0 * s[0] + m_r0 * s[1],
-            m_c * m_c * s[0] + m_u0 * s[1]};
+            m_c * m_c / m_r0 * s[0] + m_u0 * s[1]};
   }
 
   state_type wave_speeds(state_type const& /* s */) const override {
