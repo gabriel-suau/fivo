@@ -4,9 +4,9 @@ int main() {
   double const gamma = 1.4;
   double const t0 = 0;
   double const tf = 0.2;
-  double const dt = 1e-2;
+  double const dt = 1e-3;
 
-  auto mesh = fivo::Mesh(0., 1., 200);
+  auto mesh = fivo::Mesh(0, 1, 200);
 
   // Boundary conditions
   auto left_bc = fivo::system::IdealGasEuler::BCNeumann::make();
@@ -19,13 +19,10 @@ int main() {
   // Initial value (r, q, u) as a function of space
   auto const rl = 1.0, pl = 1.0, ul = 0.0;
   auto const rr = 0.125, pr = 0.1, ur = 0.0;
-  auto const jl = rl * ul;
-  auto const jr = rr * ur;
-  auto const el = pl / (gamma - 1) + 0.5 * jl * jl * rl;
-  auto const er = pr / (gamma - 1) + 0.5 * jr * jr * rr;
+  auto const left = system.prim_to_cons(state_type{rl, ul, pl});
+  auto const right = system.prim_to_cons(state_type{rr, ur, pr});
   auto const init = [&] (double const& x) {
-                      if (x <= 0.5 * (mesh.xmin() + mesh.xmax())) return state_type{rl, jl, el};
-                      else return state_type{rr, jr, er};
+                      return (x <= 0.5 * (mesh.xmin() + mesh.xmax())) ? left : right;
                     };
 
   // Output quantities
@@ -42,14 +39,30 @@ int main() {
   // Solve and save for each numerical flux
   auto io = fivo::IOManager("ideal_gas_euler_sod_rusanov", 1, mesh);
   auto X = system.create_init_state(mesh, init);
-  fivo::solve(io, system, fivo::flux::Rusanov{}, fivo::time::RK3Heun{}, X, t0, tf, dt, quantities);
+  fivo::solve(io, system, fivo::flux::Rusanov{}, fivo::time::RK1{}, X, t0, tf, dt, quantities);
   io.basename("ideal_gas_euler_sod_hll");
   X = system.create_init_state(mesh, init);
-  fivo::solve(io, system, fivo::flux::HLL{}, fivo::time::RK3Heun{}, X, t0, tf, dt, quantities);
+  fivo::solve(io, system, fivo::flux::HLL{}, fivo::time::RK1{}, X, t0, tf, dt, quantities);
   io.basename("ideal_gas_euler_sod_hllc");
   X = system.create_init_state(mesh, init);
-  fivo::solve(io, system, fivo::flux::HLLC{}, fivo::time::RK3Heun{}, X, t0, tf, dt, quantities);
-  io.basename("ideal_gas_euler_2_sod_hllc");
+  fivo::solve(io, system, fivo::flux::HLLC{}, fivo::time::RK1{}, X, t0, tf, dt, quantities);
+  io.basename("ideal_gas_euler_sod_godunov");
   X = system.create_init_state(mesh, init);
-  fivo::solve(io, system, fivo::flux::HLLC{}, fivo::time::RK3DHeun{}, X, t0, tf, dt, quantities);
+  fivo::solve(io, system, fivo::flux::Godunov{}, fivo::time::RK1{}, X, t0, tf, dt, quantities);
+
+  // Exact solution
+  auto const exact = system.solve_riemann(left, right);
+  X = system.create_init_state(mesh, init);
+  io.basename("ideal_gas_euler_sod_exact");
+  int const nt = (tf - t0) / dt;
+  for (int it = 0; it < nt; ++it) {
+    auto const t = t0 + it * dt;
+    for (int i = 0; i < mesh.nx(); ++i) {
+      // The riemann solver is centered in 0, so we have to shift our x-position
+      // when sampling the solution
+      auto const x = mesh.cell_center(i) - 0.5 * (mesh.xmin() + mesh.xmax());
+      X[i] = exact(x / t);
+    }
+    if (it % io.save_frequency() == 0) io.save_state(tf, it, X, quantities);
+  }
 }
