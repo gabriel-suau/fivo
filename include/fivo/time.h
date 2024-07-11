@@ -36,8 +36,8 @@ struct RK1 : RK {
 /* SECOND ORDER METHODS */
 struct RK2Heun : RK {
   RK2Heun() : RK(2) {
-    a = {0, 0,
-         1, 0};
+    a = {0 , 0,
+         1 , 0};
     b = {0.5, 0.5};
     c = {0, 1};
   }
@@ -45,8 +45,8 @@ struct RK2Heun : RK {
 
 struct RK2Midpoint : RK {
   RK2Midpoint() : RK(2) {
-    a = {0  , 0,
-         0.5, 0};
+    a = {0   , 0,
+         0.5 , 0};
     b = {0, 1};
     c = {0, 0.5};
   }
@@ -54,8 +54,8 @@ struct RK2Midpoint : RK {
 
 struct RK2Ralston : RK {
   RK2Ralston() : RK(2) {
-    a = {0    , 0,
-         2./3., 0};
+    a = {0     , 0,
+         2./3. , 0};
     b = {0.25, 0.75};
     c = {0, 2./3.};
   }
@@ -63,8 +63,8 @@ struct RK2Ralston : RK {
 
 struct RK2Generic : RK {
   explicit RK2Generic(double alpha) : RK(2) {
-    a = {0    , 0,
-         alpha, 0};
+    a = {0     , 0,
+         alpha , 0};
     b = {1 - 1 / (2 * alpha), 1 / (2 * alpha)};
     c = {0, alpha};
   }
@@ -73,9 +73,9 @@ struct RK2Generic : RK {
 /* THIRD ORDER METHODS */
 struct RK3Kutta : RK {
   RK3Kutta() : RK(3) {
-    a = {0  , 0, 0,
-         0.5, 0, 0,
-         -1 , 2, 0};
+    a = {0   , 0 , 0,
+         0.5 , 0 , 0,
+         -1  , 2 , 0};
     b = {1./6., 2./3., 1./6.};
     c = {0, 0.5, 1};
   }
@@ -83,9 +83,9 @@ struct RK3Kutta : RK {
 
 struct RK3Heun : RK {
   RK3Heun() : RK(3) {
-    a = {0    , 0    , 0,
-         1./3., 0    , 0,
-         0    , 2./3., 0};
+    a = {0     , 0     , 0,
+         1./3. , 0     , 0,
+         0     , 2./3. , 0};
     b = {1./4., 0, 3./4.};
     c = {0, 1./3., 2./3.};
   }
@@ -93,9 +93,9 @@ struct RK3Heun : RK {
 
 struct RK3VHW : RK {
   RK3VHW() : RK(3) {
-    a = {0     , 0     , 0,
-         8./15., 0     , 0,
-         1./4. , 5./12., 0};
+    a = {0      , 0      , 0,
+         8./15. , 0      , 0,
+         1./4.  , 5./12. , 0};
     b = {1./4., 0, 3./4.};
     c = {0, 8./15., 2./3.};
   }
@@ -103,9 +103,9 @@ struct RK3VHW : RK {
 
 struct RK3Ralston : RK {
   RK3Ralston() : RK(3) {
-    a = {0    , 0    , 0,
-         1./2., 0    , 0,
-         0    , 3./4., 0};
+    a = {0     , 0     , 0,
+         1./2. , 0     , 0,
+         0     , 3./4. , 0};
     b = {2./9., 1/3., 4./9.};
     c = {0, 1./2., 3./4.};
   }
@@ -113,9 +113,9 @@ struct RK3Ralston : RK {
 
 struct RK3SSP : RK {
   RK3SSP() : RK(3) {
-    a = {0    , 0    , 0,
-         1.   , 0    , 0,
-         1./4., 1./4., 0};
+    a = {0     , 0     , 0,
+         1.    , 0     , 0,
+         1./4. , 1./4. , 0};
     b = {1./6., 1./6., 2./3.};
     c = {0, 1., 1./2.};
   }
