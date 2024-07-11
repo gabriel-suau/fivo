@@ -156,8 +156,8 @@ Several numerical fluxes are already implemented in fivo, they are available in 
 | `LinearAdvection`         | Yes    | Yes     | Yes     | Yes | No   |
 | `LWRTrafficflow`          | N/A    | Yes     | Yes     | Yes | No   |
 | `Burgers`                 | N/A    | Yes     | Yes     | Yes | No   |
-| `LinearAcousticsDensity`  | N/A    | No      | Yes     | Yes | No   |
-| `LinearAcousticsPressure` | N/A    | No      | Yes     | Yes | No   |
+| `LinearAcousticsDensity`  | N/A    | Yes     | Yes     | Yes | No   |
+| `LinearAcousticsPressure` | N/A    | Yes     | Yes     | Yes | No   |
 | `SWE`                     | N/A    | No      | Yes     | Yes | No   |
 | `IsothermalEuler`         | N/A    | No      | Yes     | Yes | No   |
 | `IsentropicEuler`         | N/A    | No      | Yes     | Yes | No   |
