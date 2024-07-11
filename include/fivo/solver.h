@@ -44,6 +44,10 @@ void solve(IOManager const& io, System const& system, NumFlux const& numflux,
                      return rhs_value;
                    };
 
+  // Save the initial state
+  if (io.save_frequency() > 0) io.save_state(t, niter, X, quantities);
+
+  // Time loop
   while (t < tf) {
     // Adjust time step to ensure CFL condition is met
     auto const max_ws = system.max_wave_speed(X);
@@ -53,7 +57,8 @@ void solve(IOManager const& io, System const& system, NumFlux const& numflux,
     // Do one step
     step_impl(X, t, step, rhs);
     ++niter;
-    if (niter % io.save_frequency() == 0) io.save_state(t, niter, X, quantities);
+    if (io.save_frequency() > 0 && niter % io.save_frequency() == 0)
+      io.save_state(t, niter, X, quantities);
     t += step;
   }
 }
@@ -105,16 +110,22 @@ void solve_splitting(IOManager const& io, System const& system, NumFlux const& n
                          return system.source(mesh, t, X);
                        };
 
-  // Save initial solution
-  io.save_state(t, niter, X, quantities);
+  // Save the initial state
+  if (io.save_frequency() > 0) io.save_state(t, niter, X, quantities);
 
   // Time loop
   while (t < tf) {
-    auto const step = ((t + dt) <= tf) ? dt : (tf - t);
+    // Adjust time step to ensure CFL condition is met
+    auto const max_ws = system.max_wave_speed(X);
+    auto step = std::min(dt, mesh.dx() / max_ws);
+    // auto step = dt;
+    step = ((t + step) <= tf) ? step : (tf - t);
+    // Do one step
     step_impl(X, t, step, rhs_flux);
     step_impl(X, t, step, rhs_src);
     ++niter;
-    if (niter % io.save_frequency() == 0) io.save_state(t, niter, X, quantities);
+    if (io.save_frequency() > 0 && niter % io.save_frequency() == 0)
+      io.save_state(t, niter, X, quantities);
     t += step;
   }
 }
