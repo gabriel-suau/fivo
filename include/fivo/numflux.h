@@ -66,7 +66,6 @@ struct NumericalFlux {
     numflux.back() = compute(sys, state.back(), right_bc);
     return numflux;
   }
-
 };
 
 /**
@@ -75,6 +74,7 @@ struct NumericalFlux {
  * The results should match exactly those computed with \ref Godunov
  */
 struct Upwind : NumericalFlux<Upwind> {
+  static constexpr char const* name() { return "upwind"; }
   auto compute(system::LinearAdvection const& sys,
                typename system::LinearAdvection::state_type const& left,
                typename system::LinearAdvection::state_type const& right) const {
@@ -87,6 +87,7 @@ struct Upwind : NumericalFlux<Upwind> {
  * \brief Godunov numerical flux.
  */
 struct Godunov : NumericalFlux<Godunov> {
+  static constexpr char const* name() { return "godunov"; }
   template<typename System>
   auto compute(System const& sys,
                typename System::state_type const& left,
@@ -102,6 +103,7 @@ struct Godunov : NumericalFlux<Godunov> {
  * \brief Rusanov numerical flux.
  */
 struct Rusanov : NumericalFlux<Rusanov> {
+  static constexpr char const* name() { return "rusanov"; }
   template<typename System>
   auto compute(System const& sys,
                typename System::state_type const& left,
@@ -122,6 +124,7 @@ struct Rusanov : NumericalFlux<Rusanov> {
  * \brief HLL numerical flux.
  */
 struct HLL : NumericalFlux<HLL> {
+  static constexpr char const* name() { return "hll"; }
   template<typename System>
   auto compute(System const& sys,
                typename System::state_type const& left,
@@ -146,6 +149,7 @@ struct HLL : NumericalFlux<HLL> {
  * \brief HLLC numerical flux.
  */
 struct HLLC : NumericalFlux<HLLC> {
+  static constexpr char const* name() { return "hllc"; }
   template<typename System,
            std::enable_if_t<traits::is_derived<System, system::Euler>::value, bool> = false>
   auto compute(System const& sys,
