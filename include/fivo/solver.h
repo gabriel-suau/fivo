@@ -30,8 +30,7 @@ void solve(IOManager const& io, System const& system, NumFlux const& numflux,
       global_state_type rhs_value(X.size());
       auto const left_bc = left_bc_func->compute(mesh, t, X.front(), X.back());
       auto const right_bc = right_bc_func->compute(mesh, t, X.back(), X.front());
-      auto const nf = numflux.gcompute(system, left_bc, right_bc, X);
-      numflux.contribute(system, mesh, nf, rhs_value);
+      numflux.contribute(system, mesh, left_bc, right_bc, X, rhs_value);
       rhs_value += system.source(mesh, t, X);
       return rhs_value;
     };
@@ -84,8 +83,7 @@ void solve_splitting(IOManager const& io, System const& system, NumFlux const& n
       global_state_type rhs_value(X.size());
       auto const left_bc = left_bc_func->compute(mesh, t, X.front(), X.back());
       auto const right_bc = right_bc_func->compute(mesh, t, X.back(), X.front());
-      auto const nf = numflux.gcompute(system, left_bc, right_bc, X);
-      numflux.contribute(system, mesh, nf, rhs_value);
+      numflux.contribute(system, mesh, left_bc, right_bc, X, rhs_value);
       return rhs_value;
     };
 

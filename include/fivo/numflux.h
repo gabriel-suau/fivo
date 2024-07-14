@@ -73,8 +73,8 @@ struct NumericalFlux {
    * \tparam System Type of the system
    *
    * \param[in] sys      System object (used only to ensure type correctness)
-   * \param[in] numflux  Numerical fluxes on the edges (computed with tcompute)
    * \param[in] mesh     Mesh object
+   * \param[in] numflux  Numerical fluxes on the edges (computed with gcompute)
    * \param[out] source  Global source inside the domain
    */
   template<typename System>
@@ -87,6 +87,36 @@ struct NumericalFlux {
       source[i] += numflux[i];
     }
     source.back() -= numflux.back();
+    source /= mesh.dx();
+  }
+
+  /**
+   * \brief Compute and add the numerical flux contribution to the source
+   *
+   * \tparam System Type of the system
+   *
+   * \param[in] sys      System object
+   * \param[in] mesh     Mesh object
+   * \param[in] left_bc  State of the left boundary ghost-cell
+   * \param[in] right_bc State of the right boundary ghost-cell
+   * \param[in] state    Global state inside the domain
+   * \param[out] source  Global source inside the domain
+   */
+  template<typename System>
+  auto contribute(System const& sys, Mesh const& mesh,
+                  typename System::state_type const& left_bc,
+                  typename System::state_type const& right_bc,
+                  typename System::global_state_type const& state,
+                  typename System::global_state_type& source) const {
+    auto numflux = compute(sys, left_bc, state.front());
+    source[0] += numflux;
+    for (std::size_t i = 1; i < state.size(); ++i) {
+      numflux = compute(sys, state[i - 1], state[i]);
+      source[i - 1] -= numflux;
+      source[i] += numflux;
+    }
+    numflux = compute(sys, state.back(), right_bc);
+    source.back() -= numflux;
     source /= mesh.dx();
   }
 };
