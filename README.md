@@ -16,6 +16,19 @@ where $U$ is the vector of conservative variables, $F$ is the flux function and 
 * Requires C++17
 * Extensible
 
+## Table of contents
+* [Assumptions](#assumptions)
+* [Systems](#systems)
+* [Adding a new system](#adding-a-new-system)
+  * [Deriving from an existing one](#deriving-from-an-existing-one)
+  * [From scratch](#from-scratch)
+  * [Handling spatially-varying fluxes](#handling-spatially-varying-fluxes)
+* [Numerical fluxes](#numerical-fluxes)
+* [Adding a new numerical flux](#adding-a-new-numerical-flux)
+
+## Assumptions
+fivo assumes that the flux function $F$ is autonomous, _i.e._ does not depend explicitly on the space variable. However, most of the time, a simple trick can be used, consisting in augmenting the original system with a new conserved quantity corresponding to the explicitly spatially varying part of the flux. More details on this below.
+
 ## Systems
 
 Several systems are already implemented in fivo, they are available in the `fivo::system` namespace :
@@ -77,7 +90,7 @@ Several systems are already implemented in fivo, they are available in the `fivo
 
 There are two main syntaxes to create a new system : deriving it from one of the above or creating it from scratch.
 
-### Deriving a new system from an existing one
+### Deriving from an existing one
 
 If you only want to change small things to a system implemented in fivo, you can just derive your new system struct from it and only change your application specific implementation. For instance, creating a Euler system with a custom EOS for the pressure is easily done with
 ```c++
@@ -97,7 +110,7 @@ struct EulerCustomEOS : fivo::system::Euler {
 };
 ```
 
-### Add a completely new system
+### From scratch
 To add a completely new system that can't be derived from on of the existing one, the syntax is a bit more verbose, and is easier to illustrate with an example.
 
 Let's say you'd like to code a new system that has 2 conservative variables, and a source term. The minimal syntax is the following
@@ -130,6 +143,8 @@ struct NewSystem : fivo::system::System<state_type> {
   state_type flux(state_type const& s) const override { /*...*/; }
   state_type wave_speeds(state_type const& s) const override { /*...*/; }
   bool admissible(state_type const& s) const override { /*...*/; }
+  state_type prim_to_cons(state_type const& s) const override { /*....*/; }
+  state_type cons_to_prim(state_type const& s) const override { /*....*/; }
 
   /* Define the global source function */
   global_state_type source(Mesh const& mesh, 
@@ -145,6 +160,9 @@ Lets break it down. First, your new struct must always derive from the `fivo::sy
 Next, you have to define at least one boundary condition type for your system. This is done by declaring structs with a `compute` method (with the exact same signature as above). You can define them inside or outside your system struct. A minimal constructor shoud have three argument (a mesh and two boundary conditions), and should call the `fivo::system::System` constructor with them.
 
 A new system should at least implement the `flux`, `wave_speeds`, `admissible`, `prim_to_cons` and `cons_to_prim` functions that respectively compute the physical flux, the wave speeds (i.e. the eigenvalues of the flux jacobian), the set of admissible states, and the conversion between primitive and conservative variables. Optionnaly, to add a source, it should also override the `source` function (base implementation sets a zero source everywhere).
+
+### Handling spatially-varying fluxes
+In many cases, the flux function may explicitly depend on the space variable. Some examples include linear acoustics in a heterogeneous media or the LWR traffic flow model with varying speed limit. fivo does not handle explicitly spatially-varying (non-autonomous) fluxes (for now). One solution consists in introducing a new conservative variable in the system that corresponds to the non-autonoumous part of the flux. This effectively transforms a non-autonomous system of $m$ equations into an autonomous system of $(m+1)$ equations, where the last one is a degenerate conservation equation.
 
 ## Numerical fluxes
 
