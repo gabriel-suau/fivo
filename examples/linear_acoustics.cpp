@@ -32,7 +32,9 @@ int main(int argc, char** argv) {
   auto const density  = [&] (double const&, state_type const& s) { return system.density(s); };
   auto const pressure = [&] (double const&, state_type const& s) { return system.pressure(s); };
   auto const velocity = [&] (double const&, state_type const& s) { return system.velocity(s); };
-  auto const quantities = std::make_tuple(density, pressure, velocity);
+  auto const quantities = std::make_tuple(std::make_pair("density", density),
+                                          std::make_pair("pressure", pressure),
+                                          std::make_pair("velocity", velocity));
 
   // Solve and save for each numerical flux
   auto io = fivo::IOManager("acoustics_rusanov", 1, mesh);

@@ -34,7 +34,11 @@ int main() {
                           auto const u = system.velocity(s);
                           return s[2] / s[0] - 0.5 * u  *u;
                         };
-  auto const quantities = std::make_tuple(density, pressure, velocity, ienergy, tenergy);
+  auto const quantities = std::make_tuple(std::make_pair("density", density),
+                                          std::make_pair("pressure", pressure),
+                                          std::make_pair("velocity", velocity),
+                                          std::make_pair("internal_energy", ienergy),
+                                          std::make_pair("total_energy", tenergy));
 
   // Solve and save for each numerical flux
   auto io = fivo::IOManager("ideal_gas_euler_sod_rusanov", 1, mesh);

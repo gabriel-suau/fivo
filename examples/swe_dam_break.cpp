@@ -33,7 +33,11 @@ int main() {
   auto const total_height = [&] (double const&, state_type const& s) { return s[0]; };
   auto const velocity = [&] (double const&, state_type const& s) { return system.velocity(s); };
   auto const topography = [&] (double const&, state_type const&) { return 0; };
-  auto const quantities = std::make_tuple(topography, water_height, total_height, discharge, velocity);
+  auto const quantities = std::make_tuple(std::make_pair("topography", topography),
+                                          std::make_pair("water_height", water_height),
+                                          std::make_pair("total_height", total_height),
+                                          std::make_pair("discharge", discharge),
+                                          std::make_pair("velocity", velocity));
 
   auto io = fivo::IOManager("swe_dam_break_rusanov", 1, mesh);
   auto X = system.create_init_state(mesh, init);

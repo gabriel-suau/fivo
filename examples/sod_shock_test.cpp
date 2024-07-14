@@ -35,7 +35,12 @@ int main() {
                           return s[2] / s[0] - 0.5 * u  *u;
                         };
   auto const concentration = [&] (double const&, state_type const& s) { return s[3] / s[0]; };
-  auto const quantities = std::make_tuple(density, pressure, velocity, ienergy, tenergy, concentration);
+  auto const quantities = std::make_tuple(std::make_pair("density", density),
+                                          std::make_pair("pressure", pressure),
+                                          std::make_pair("velocity", velocity),
+                                          std::make_pair("internal_energy", ienergy),
+                                          std::make_pair("total_energy", tenergy),
+                                          std::make_pair("concentration", concentration));
 
   // Solve and save for each numerical flux
   auto io = fivo::IOManager("test_sod_rusanov", 1, mesh);

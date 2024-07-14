@@ -43,7 +43,11 @@ int main() {
   auto const total_height = [&] (double const& x, state_type const& s) { return s[0] + bump(x); };
   auto const discharge = [&] (double const&, state_type const& s) { return s[1]; };
   auto const velocity = [&] (double const&, state_type const& s) { return system.velocity(s); };
-  auto const quantities = std::make_tuple(topography, water_height, total_height, discharge, velocity);
+  auto const quantities = std::make_tuple(std::make_pair("topography", topography),
+                                          std::make_pair("water_height", water_height),
+                                          std::make_pair("total_height", total_height),
+                                          std::make_pair("discharge", discharge),
+                                          std::make_pair("velocity", velocity));
 
   // Solve and save for each numerical flux
   auto io = fivo::IOManager("swe_rusanov", 20, mesh);

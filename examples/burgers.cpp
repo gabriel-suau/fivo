@@ -21,14 +21,15 @@ int main(int argc, char** argv) {
 
   // Output quantities
   auto const u = [&] (double const&, state_type const& s) { return s[0]; };
+  auto const quantities = std::make_tuple(std::make_pair("velocity", u));
 
   // Solve and save for each numerical flux
   auto io = fivo::IOManager("burgers_rusanov", 10, mesh);
-  fivo::solve(io, system, fivo::flux::Rusanov{}, fivo::time::RK1{}, X, t0, tf, dt, u);
+  fivo::solve(io, system, fivo::flux::Rusanov{}, fivo::time::RK1{}, X, t0, tf, dt, quantities);
   io.basename("burgers_hll");
   X = system.create_init_state(mesh, init);
-  fivo::solve(io, system, fivo::flux::HLL{}, fivo::time::RK1{}, X, t0, tf, dt, u);
+  fivo::solve(io, system, fivo::flux::HLL{}, fivo::time::RK1{}, X, t0, tf, dt, quantities);
   io.basename("burgers_godunov");
   X = system.create_init_state(mesh, init);
-  fivo::solve(io, system, fivo::flux::Godunov{}, fivo::time::RK1{}, X, t0, tf, dt, u);
+  fivo::solve(io, system, fivo::flux::Godunov{}, fivo::time::RK1{}, X, t0, tf, dt, quantities);
 }

@@ -6,6 +6,7 @@
 #include <string>
 #include <fstream>
 #include <tuple>
+#include <ctime>
 
 namespace fivo {
 
@@ -43,10 +44,25 @@ public:
     std::string filename = m_basename + "_" + std::to_string(niter) + ".dat";
     std::ofstream file(filename);
     if (!file.is_open()) throw std::runtime_error("Could not open output file " + filename);
+
+    // Save header as comment
+    auto const date_time = std::time(nullptr);
+    char dtstr[100];
+    std::strftime(dtstr, sizeof(dtstr), "%c", std::localtime(&date_time));
+    file << "# fivo output\n"
+         << "# " << dtstr << "\n"
+         << "# at time t = " << t << "\n";
+
+    // Save the quantities names
+    file << "# x";
+    impl::apply([&] (auto const& q) { file << " " << q.first; }, quantities);
+    file << "\n";
+
+    // Save the quantities values
     for (int i = 0; i < m_mesh.nx(); ++i) {
       auto const x = m_mesh.cell_center(i);
       file << x;
-      impl::apply([&] (auto const& q) { file << " " << q(x, X[i]); }, quantities);
+      impl::apply([&] (auto const& q) { file << " " << q.second(x, X[i]); }, quantities);
       file << "\n";
     }
   }

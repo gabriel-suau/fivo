@@ -26,7 +26,8 @@ int main(int argc, char** argv) {
   // Output quantities
   auto const density = [&] (double const&, state_type const& s) { return s[0]; };
   auto const velocity = [&] (double const&, state_type const& s) { return system.velocity(s); };
-  auto const quantities = std::make_tuple(density, velocity);
+  auto const quantities = std::make_tuple(std::make_pair("density", density),
+                                          std::make_pair("velocity", velocity));
 
   // Solve and save for each numerical flux
   auto io = fivo::IOManager("traffic_rusanov", 5, mesh);
