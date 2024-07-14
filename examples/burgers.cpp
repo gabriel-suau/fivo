@@ -8,8 +8,8 @@ int main(int argc, char** argv) {
   auto mesh = fivo::Mesh(-10., 10., 500);
 
   // Boundary conditions
-  auto left_bc = fivo::system::Burgers::BCWall::make();
-  auto right_bc = fivo::system::Burgers::BCWall::make();
+  auto left_bc = fivo::system::Burgers::BCReflective::make();
+  auto right_bc = fivo::system::Burgers::BCReflective::make();
 
   // Create the system
   auto system = fivo::system::Burgers(mesh, left_bc, right_bc);

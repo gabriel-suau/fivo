@@ -25,24 +25,16 @@ void solve(IOManager const& io, System const& system, NumFlux const& numflux,
   auto const& mesh = system.mesh();
 
   // Rhs computation at each time stem
-  auto const rhs = [&] (double const& t, global_state_type const& X) {
-                     global_state_type rhs_value(X.size());
-                     // Add flux contrib
-                     auto const left_bc = left_bc_func->compute(mesh, t, X.front(), X.back(), 1);
-                     auto const right_bc = right_bc_func->compute(mesh, t, X.back(), X.front(), -1);
-                     auto const nf = numflux.gcompute(system, left_bc, right_bc, X);
-                     rhs_value[0] = rhs_value[0] + nf[0];
-                     for (std::size_t i = 1; i < X.size(); ++i) {
-                       rhs_value[i - 1] -= nf[i];
-                       rhs_value[i] += nf[i];
-                     }
-                     rhs_value.back() -= nf.back();
-                     // Divide by mesh step
-                     rhs_value /= mesh.dx();
-                     // Source contrib
-                     rhs_value += system.source(mesh, t, X);
-                     return rhs_value;
-                   };
+  auto const rhs =
+    [&] (double const& t, global_state_type const& X) {
+      global_state_type rhs_value(X.size());
+      auto const left_bc = left_bc_func->compute(mesh, t, X.front(), X.back());
+      auto const right_bc = right_bc_func->compute(mesh, t, X.back(), X.front());
+      auto const nf = numflux.gcompute(system, left_bc, right_bc, X);
+      numflux.contribute(system, mesh, nf, rhs_value);
+      rhs_value += system.source(mesh, t, X);
+      return rhs_value;
+    };
 
   // Save the initial state
   if (io.save_frequency() > 0) io.save_state(t, niter, X, quantities);
@@ -90,25 +82,16 @@ void solve_splitting(IOManager const& io, System const& system, NumFlux const& n
   auto const rhs_flux =
     [&] (double const& t, global_state_type const& X) {
       global_state_type rhs_value(X.size());
-      // Add flux contrib
-      auto const left_bc = left_bc_func->compute(mesh, t, X.front(), X.back(), 1);
-      auto const right_bc = right_bc_func->compute(mesh, t, X.back(), X.front(), -1);
+      auto const left_bc = left_bc_func->compute(mesh, t, X.front(), X.back());
+      auto const right_bc = right_bc_func->compute(mesh, t, X.back(), X.front());
       auto const nf = numflux.gcompute(system, left_bc, right_bc, X);
-      rhs_value[0] = rhs_value[0] + nf[0];
-      for (std::size_t i = 1; i < X.size(); ++i) {
-        rhs_value[i - 1] -= nf[i];
-        rhs_value[i] += nf[i];
-      }
-      rhs_value.back() -= nf.back();
-      // Divide by mesh step
-      rhs_value /= mesh.dx();
+      numflux.contribute(system, mesh, nf, rhs_value);
       return rhs_value;
     };
 
   // Source rhs
-  auto const rhs_src = [&] (double const& t, global_state_type const& X) {
-                         return system.source(mesh, t, X);
-                       };
+  auto const rhs_src =
+    [&] (double const& t, global_state_type const& X) { return system.source(mesh, t, X); };
 
   // Save the initial state
   if (io.save_frequency() > 0) io.save_state(t, niter, X, quantities);

@@ -66,6 +66,29 @@ struct NumericalFlux {
     numflux.back() = compute(sys, state.back(), right_bc);
     return numflux;
   }
+
+  /**
+   * \brief Add the numerical flux contribution
+   *
+   * \tparam System Type of the system
+   *
+   * \param[in] sys      System object (used only to ensure type correctness)
+   * \param[in] numflux  Numerical fluxes on the edges (computed with tcompute)
+   * \param[in] mesh     Mesh object
+   * \param[out] source  Global source inside the domain
+   */
+  template<typename System>
+  auto contribute(System const& sys, Mesh const& mesh,
+                  typename System::global_state_type const& numflux,
+                  typename System::global_state_type& source) const {
+    source[0] += numflux[0];
+    for (std::size_t i = 1; i < source.size(); ++i) {
+      source[i - 1] -= numflux[i];
+      source[i] += numflux[i];
+    }
+    source.back() -= numflux.back();
+    source /= mesh.dx();
+  }
 };
 
 /**
@@ -169,24 +192,63 @@ struct HLLC : NumericalFlux<HLLC> {
     if (cr <= 0) return fr;
 
     // Compute intermediate state
-    auto const rl = sys.density(left);
-    auto const rr = sys.density(right);
-    auto const pl = sys.pressure(left);
-    auto const pr = sys.pressure(right);
-    auto const ul = sys.velocity(left);
-    auto const ur = sys.velocity(right);
+    auto const& [rl, ul, pl] = sys.cons_to_prim(left);
+    auto const& [rr, ur, pr] = sys.cons_to_prim(right);
     auto const cstar = (pr - pl + rl * ul * (cl - ul) - rr * ur * (cr - ur))
       / (rl * (cl - ul) - rr * (cr - ur));
     auto const dstar = typename System::state_type{0, 1, cstar};
     auto const plstar = pl + rl * (cl - ul) * (cstar - ul);
-    auto const ulstar = (cl * left  - fl + plstar * dstar) / (cl - cstar);
-    auto const flstar = fl + cl * (ulstar - left);
+    auto const lstar  = (cl * left  - fl + plstar * dstar) / (cl - cstar);
+    auto const flstar = fl + cl * (lstar - left);
     if (0 <= cstar) return flstar;
     auto const prstar = pr + rr * (cr - ur) * (cstar - ur);
-    auto const urstar = (cr * right - fr + prstar * dstar) / (cr - cstar);
-    auto const frstar = fr + cr * (urstar - right);
+    auto const rstar  = (cr * right - fr + prstar * dstar) / (cr - cstar);
+    auto const frstar = fr + cr * (rstar - right);
     return frstar;
   }
+
+  template<template<std::size_t> typename System, std::size_t NPS,
+           std::enable_if_t<traits::is_derived<System<NPS>, system::EulerP<NPS>>::value,
+                            bool> = false>
+  auto compute(System<NPS> const& sys,
+               typename System<NPS>::state_type const& left,
+               typename System<NPS>::state_type const& right) const {
+    auto const fl = sys.flux(left);
+    auto const fr = sys.flux(right);
+    auto const wsl = sys.wave_speeds(left);
+    auto const wsr = sys.wave_speeds(right);
+    auto const lmin = *std::min_element(wsl.begin(), wsl.end());
+    auto const rmin = *std::min_element(wsr.begin(), wsr.end());
+    auto const cl = std::min(lmin, rmin);
+    if (0 <= cl) return fl;
+    auto const lmax = *std::max_element(wsl.begin(), wsl.end());
+    auto const rmax = *std::max_element(wsr.begin(), wsr.end());
+    auto const cr = std::max(lmax, rmax);
+    if (cr <= 0) return fr;
+
+    // Compute intermediate state
+    auto const lprim = sys.cons_to_prim(left);
+    auto const rprim = sys.cons_to_prim(right);
+    auto const& rl = lprim[0];
+    auto const& ul = lprim[1];
+    auto const& pl = lprim[2];
+    auto const& rr = rprim[0];
+    auto const& ur = rprim[1];
+    auto const& pr = rprim[2];
+    auto const cstar = (pr - pl + rl * ul * (cl - ul) - rr * ur * (cr - ur))
+      / (rl * (cl - ul) - rr * (cr - ur));
+    auto dstar = typename System<NPS>::state_type{0, 1, cstar};
+    for (std::size_t i = 0; i < NPS; ++i) { dstar[3 + i] = 0.; }
+    auto const plstar = pl + rl * (cl - ul) * (cstar - ul);
+    auto const lstar  = (cl * left  - fl + plstar * dstar) / (cl - cstar);
+    auto const flstar = fl + cl * (lstar - left);
+    if (0 <= cstar) return flstar;
+    auto const prstar = pr + rr * (cr - ur) * (cstar - ur);
+    auto const rstar  = (cr * right - fr + prstar * dstar) / (cr - cstar);
+    auto const frstar = fr + cr * (rstar - right);
+    return frstar;
+  }
+};
 };
 
 } // namespace flux

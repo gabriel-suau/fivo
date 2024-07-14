@@ -13,8 +13,8 @@ int main(int argc, char** argv) {
   auto const dt = mesh.dx() / (u0 + c);
 
   // Boundary conditions
-  auto left_bc = fivo::system::LinearAcousticsPressure::BCNeumann::make();
-  auto right_bc = fivo::system::LinearAcousticsPressure::BCNeumann::make();
+  auto left_bc = fivo::system::LinearAcousticsPressure::BCTransmissive::make();
+  auto right_bc = fivo::system::LinearAcousticsPressure::BCTransmissive::make();
 
   // Create the system
   auto system = fivo::system::LinearAcousticsPressure(mesh, left_bc, right_bc, c, r0, u0);

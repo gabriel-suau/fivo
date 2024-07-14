@@ -111,8 +111,7 @@ struct NewSystem : fivo::system::System<state_type> {
   struct MyBCType : fivo::system::System<state_type>::BC {
     static inline auto make() { return std::make_shared<MyBCType>(); }
     state_type compute(fivo::Mesh const& mesh, value_type const& t, 
-                       state_type const& in, state_type const& in_opbound,
-                       int const normal) const final {
+                       state_type const& in, state_type const& in_opbound) const final {
       // impl
     }
   };
@@ -124,7 +123,7 @@ struct NewSystem : fivo::system::System<state_type> {
             std::shared_ptr<BC> const& left_bc,
             std::shared_ptr<BC> const& right_bc,
             /* optional arguments (needed internally for instance) */)
-    : fivo::system::System(mesh, left_bc, right_bc), ... 
+    : fivo::system::System(mesh, left_bc, right_bc) /*, ... */
   {}
 
   /* Define the physical flux, wave speeds and the admissible state space */
@@ -132,7 +131,7 @@ struct NewSystem : fivo::system::System<state_type> {
   state_type wave_speeds(state_type const& s) const override { /*...*/; }
   bool admissible(state_type const& s) const override { /*...*/; }
 
-  /* Define the global source function /*
+  /* Define the global source function */
   global_state_type source(Mesh const& mesh, 
                            value_type const& t, 
                            global_state_type const& X) const override {
@@ -145,7 +144,7 @@ Lets break it down. First, your new struct must always derive from the `fivo::sy
 
 Next, you have to define at least one boundary condition type for your system. This is done by declaring structs with a `compute` method (with the exact same signature as above). You can define them inside or outside your system struct. A minimal constructor shoud have three argument (a mesh and two boundary conditions), and should call the `fivo::system::System` constructor with them.
 
-A new system should at least implement the `flux`, `wave_speeds` and `admissible` functions that respectively compute the physical flux, the wave speeds (i.e. the eigenvalues of the flux jacobian), and the set of admissible states. Optionnaly, to add a source, it should also override the `source` function (base implementation sets a null source everywhere).
+A new system should at least implement the `flux`, `wave_speeds`, `admissible`, `prim_to_cons` and `cons_to_prim` functions that respectively compute the physical flux, the wave speeds (i.e. the eigenvalues of the flux jacobian), the set of admissible states, and the conversion between primitive and conservative variables. Optionnaly, to add a source, it should also override the `source` function (base implementation sets a zero source everywhere).
 
 ## Numerical fluxes
 

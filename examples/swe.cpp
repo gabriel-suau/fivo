@@ -11,8 +11,8 @@ int main() {
   // Boundary conditions
   // auto left_bc_func = [] (double const& t) { return state_type{2. + std::sin(t / (2. * M_PI)), 1.}; };
   // auto left_bc = fivo::SWE::BCImposedWaterHeight<decltype(left_bc_func)>::make(left_bc_func);
-  auto left_bc = fivo::system::SWE::BCWall::make();
-  auto right_bc = fivo::system::SWE::BCWall::make();
+  auto left_bc = fivo::system::SWE::BCReflective::make();
+  auto right_bc = fivo::system::SWE::BCReflective::make();
 
   // Friction model
   auto friction_model = fivo::system::SWE::ManningFriction::make(0.04);

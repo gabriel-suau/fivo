@@ -6,11 +6,11 @@ int main() {
   double const tf = 1;
   double const dt = 1e-3;
 
-  auto mesh = fivo::Mesh(0., 25., 800);
+  auto mesh = fivo::Mesh(0., 25., 200);
 
   // Boundary conditions
-  auto left_bc = fivo::system::SWE::BCNeumann::make();
-  auto right_bc = fivo::system::SWE::BCNeumann::make();
+  auto left_bc = fivo::system::SWE::BCTransmissive::make();
+  auto right_bc = fivo::system::SWE::BCTransmissive::make();
 
   // Friction model
   auto friction_model = fivo::system::SWE::NoFriction::make(0);
@@ -20,9 +20,11 @@ int main() {
   using state_type = typename fivo::system::SWE::state_type;
 
   // Initial value (h, q) as a function of space
+  auto const left = state_type{2, 0};
+  auto const right = state_type{1, 0};
   auto const init = [&] (double const& x) {
-                      if (x < 0.5 * (mesh.xmin() + mesh.xmax())) return state_type{2., 0.};
-                      else return state_type{1., 0.};
+                      if (x < 0.5 * (mesh.xmin() + mesh.xmax())) return left;
+                      else return right;
                     };
 
   // Output quantities
@@ -33,10 +35,29 @@ int main() {
   auto const topography = [&] (double const&, state_type const&) { return 0; };
   auto const quantities = std::make_tuple(topography, water_height, total_height, discharge, velocity);
 
-  auto io = fivo::IOManager("swe_dam_break_rusanov", 10, mesh);
+  auto io = fivo::IOManager("swe_dam_break_rusanov", 1, mesh);
   auto X = system.create_init_state(mesh, init);
   fivo::solve(io, system, fivo::flux::Rusanov{}, fivo::time::RK1{}, X, t0, tf, dt, quantities);
   io.basename("swe_dam_break_hll");
   X = system.create_init_state(mesh, init);
   fivo::solve(io, system, fivo::flux::HLL{}, fivo::time::RK1{}, X, t0, tf, dt, quantities);
+  io.basename("swe_dam_break_godunov");
+  X = system.create_init_state(mesh, init);
+  fivo::solve(io, system, fivo::flux::Godunov{}, fivo::time::RK1{}, X, t0, tf, dt, quantities);
+
+  // Exact solution
+  auto const exact = system.solve_riemann(left, right);
+  X = system.create_init_state(mesh, init);
+  io.basename("swe_dam_break_exact");
+  int const nt = (tf - t0) / dt;
+  for (int it = 0; it < nt; ++it) {
+    auto const t = t0 + it * dt;
+    for (int i = 0; i < mesh.nx(); ++i) {
+      // The riemann solver is centered in 0, so we have to shift our x-position
+      // when sampling the solution
+      auto const x = mesh.cell_center(i) - 0.5 * (mesh.xmin() + mesh.xmax());
+      X[i] = exact(x / t);
+    }
+    if (it % io.save_frequency() == 0) io.save_state(t, it+1, X, quantities);
+  }
 }
