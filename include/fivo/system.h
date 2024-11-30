@@ -19,7 +19,6 @@ namespace system {
 template<typename System, typename State>
 struct HasVelocity {
   using state_type = State;
-  using global_state_type = fivo::global_state<state_type>;
   using value_type = typename state_type::value_type;
 
   value_type velocity(state_type const& in) const {
@@ -30,7 +29,6 @@ struct HasVelocity {
 template<typename System, typename State>
 struct HasDensity {
   using state_type = State;
-  using global_state_type = fivo::global_state<state_type>;
   using value_type = typename state_type::value_type;
 
   value_type density(state_type const& in) const {
@@ -41,7 +39,6 @@ struct HasDensity {
 template<typename System, typename State>
 struct HasPressure {
   using state_type = State;
-  using global_state_type = fivo::global_state<state_type>;
   using value_type = typename state_type::value_type;
 
   value_type pressure(state_type const& in) const {
@@ -52,7 +49,6 @@ struct HasPressure {
 template<typename System, typename State>
 struct HasRiemannSolver {
   using state_type = State;
-  using global_state_type = fivo::global_state<State>;
   using value_type = typename state_type::value_type;
 
   auto solve_riemann(state_type const& left, state_type const& right) const {
