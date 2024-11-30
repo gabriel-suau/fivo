@@ -54,7 +54,7 @@ inline auto error_l2(global_state<State> const& X,
 template<typename State>
 inline auto error_linf(global_state<State> const& X,
                        global_state<State> const& Y,
-                       double const& = 1) {
+                       double const& /* dx */) {
   State err = {0.};
   for (std::size_t i = 0; i < X.size(); ++i)
     for (std::size_t v = 0; v < X[i].size(); ++v)

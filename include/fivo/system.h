@@ -16,48 +16,36 @@ namespace fivo {
 
 namespace system {
 
-template<typename State>
+template<typename System, typename State>
 struct HasVelocity {
   using state_type = State;
-  using global_state_type = fivo::global_state<State>;
+  using global_state_type = fivo::global_state<state_type>;
   using value_type = typename state_type::value_type;
 
-  virtual value_type velocity(state_type const& in) const = 0;
-  auto gvelocity(global_state_type const& in) const {
-    vector<value_type> out(in.size());
-    std::transform(in.begin(), in.end(), out.begin(),
-                   [&] (state_type const& s) { return velocity(s); });
-    return out;
+  value_type velocity(state_type const& in) const {
+    return static_cast<System const*>(this)->velocity(in);
   }
 };
 
-template<typename State>
+template<typename System, typename State>
 struct HasDensity {
   using state_type = State;
-  using global_state_type = fivo::global_state<State>;
+  using global_state_type = fivo::global_state<state_type>;
   using value_type = typename state_type::value_type;
 
-  virtual value_type density(state_type const& in) const = 0;
-  auto gdensity(global_state_type const& in) const {
-    vector<value_type> out(in.size());
-    std::transform(in.begin(), in.end(), out.begin(),
-                   [&] (state_type const& s) { return density(s); });
-    return out;
+  value_type density(state_type const& in) const {
+    return static_cast<System const*>(this)->density(in);
   }
 };
 
-template<typename State>
+template<typename System, typename State>
 struct HasPressure {
   using state_type = State;
-  using global_state_type = fivo::global_state<State>;
+  using global_state_type = fivo::global_state<state_type>;
   using value_type = typename state_type::value_type;
 
-  virtual value_type pressure(state_type const& in) const = 0;
-  auto gpressure(global_state_type const& in) const {
-    vector<value_type> out(in.size());
-    std::transform(in.begin(), in.end(), out.begin(),
-                   [&] (state_type const& s) { return pressure(s); });
-    return out;
+  value_type pressure(state_type const& in) const {
+    return static_cast<System const*>(this)->pressure(in);
   }
 };
 
@@ -77,16 +65,42 @@ struct HasRiemannSolver {
 namespace traits {
 
 template<typename System>
+struct has_velocity {
+  static constexpr bool value =
+    traits::is_derived_v<System, system::HasVelocity<System, typename System::state_type>>;
+};
+template<typename System>
+constexpr bool has_velocity_v = has_velocity<System>::value;
+
+template<typename System>
+struct has_density {
+  static constexpr bool value =
+    traits::is_derived_v<System, system::HasDensity<System, typename System::state_type>>;
+};
+template<typename System>
+constexpr bool has_density_v = has_density<System>::value;
+
+template<typename System>
+struct has_pressure {
+  static constexpr bool value =
+    traits::is_derived_v<System, system::HasPressure<System, typename System::state_type>>;
+};
+template<typename System>
+constexpr bool has_pressure_v = has_pressure<System>::value;
+
+template<typename System>
 struct has_riemann_solver {
   static constexpr bool value =
-    traits::is_derived<System, system::HasRiemannSolver<System, typename System::state_type>>::value;
+    traits::is_derived_v<System, system::HasRiemannSolver<System, typename System::state_type>>;
 };
+template<typename System>
+constexpr bool has_riemann_solver_v = has_riemann_solver<System>::value;
 
 } // namespace traits
 
 namespace system {
 
-template<typename State>
+template<typename Derived, typename State>
 struct System {
   using state_type = State;
   using global_state_type = fivo::global_state<State>;
@@ -113,7 +127,9 @@ struct System {
    * \param[in] in The input local state
    * \return The physical flux
    */
-  virtual state_type flux(state_type const& in) const = 0;
+  state_type flux(state_type const& in) const {
+    return static_cast<Derived const*>(this)->flux(in);
+  }
 
   /**
    * \brief Computes the wave speeds (i.e. the eigenvalues of the flux jacobian)
@@ -122,7 +138,9 @@ struct System {
    * \param[in] in The input local state
    * \return All wave speeds
    */
-  virtual state_type wave_speeds(state_type const& in) const = 0;
+  state_type wave_speeds(state_type const& in) const {
+    return static_cast<Derived const*>(this)->wave_speeds(in);
+  }
 
   /**
    * \brief Determines if a local state is admissible
@@ -130,7 +148,9 @@ struct System {
    * \param[in] in The input local state
    * \return True or False depending on the admissibility conditions
    */
-  virtual bool admissible(state_type const& in) const = 0;
+  bool admissible(state_type const& in) const {
+    return static_cast<Derived const*>(this)->admissible(in);
+  }
 
   /**
    * \brief Transforms a local state in conservative variables to primitives variables.
@@ -140,7 +160,9 @@ struct System {
    * \param[in] in The input local state in conservative variables
    * \return The same physical local state in primitive variables formulation
    */
-  virtual state_type cons_to_prim(state_type const& in) const = 0;
+  state_type cons_to_prim(state_type const& in) const {
+    return static_cast<Derived const*>(this)->cons_to_prim(in);
+  }
 
   /**
    * \brief Transforms a local state in primitive variables to conservative variables.
@@ -150,51 +172,30 @@ struct System {
    * \param[in] in The input local state in primitive variables
    * \return The same physical local state in conservative variables formulation
    */
-  virtual state_type prim_to_cons(state_type const& in) const = 0;
+  state_type prim_to_cons(state_type const& in) const {
+    return static_cast<Derived const*>(this)->prim_to_cons(in);
+  }
 
   /* GLOBAL STATE FUNCTION */
-  auto gflux(global_state_type const& in) const {
-    vector<state_type> out(in.size());
-    std::transform(in.begin(), in.end(), out.begin(),
-                   [&] (state_type const& s) { return flux(s); });
+  template<typename LocalFunc>
+  auto global(global_state_type const& in, LocalFunc&& func) const {
+    using ret_type = decltype(func(std::declval<state_type>()));
+    vector<ret_type> out(in.size());
+    std::transform(in.begin(), in.end(), out.begin(), func);
     return out;
   }
 
-  auto gwave_speeds(global_state_type const& in) const {
-    vector<state_type> out(in.size());
-    std::transform(in.begin(), in.end(), out.begin(),
-                   [&] (state_type const& s) { return wave_speeds(s); });
-    return out;
-  }
   auto max_wave_speed(global_state_type const& in) const {
-    auto const ws = gwave_speeds(in);
-    auto maxws = vector<value_type>(ws.size());
     auto comp = [&] (auto const& l, auto const& r) { return std::abs(l) < std::abs(r); };
-    std::transform(ws.begin(), ws.end(), maxws.begin(),
-                   [&] (auto const& s) {
-                     return std::abs(*std::max_element(s.begin(), s.end(), comp));
-                   });
-    return *std::max_element(maxws.begin(), maxws.end());
-  }
-
-  auto gadmissible(global_state_type const& in) const {
-    vector<bool> out(in.size());
-    std::transform(in.begin(), in.end(), out.begin(),
-                   [&] (state_type const& s) { return admissible(s); });
-    return out;
-  }
-
-  auto gprim_to_cons(global_state_type const& in) const {
-    vector<state_type> out(in.size());
-    std::transform(in.begin(), in.end(), out.begin(),
-                   [&] (state_type const& s) { return prim_to_cons(s); });
-    return out;
-  }
-  auto gcons_to_prim(global_state_type const& in) const {
-    vector<state_type> out(in.size());
-    std::transform(in.begin(), in.end(), out.begin(),
-                   [&] (state_type const& s) { return cons_to_prim(s); });
-    return out;
+    value_type max = 0;
+    for (auto const& s : in) {
+      auto const ws = wave_speeds(s);
+      for (auto const& w : ws) {
+        auto const aw = std::abs(w);
+        if (aw > max) max = aw;
+      }
+    }
+    return max;
   }
 
   template<typename InitFunc>
@@ -219,15 +220,16 @@ protected:
 };
 
 /* LINEAR ADVECTION EQUATION */
-struct LinearAdvection : System<fivo::state<double, 1>>,
-                         HasDensity<fivo::state<double, 1>>,
-                         HasVelocity<fivo::state<double, 1>>,
+struct LinearAdvection : System<LinearAdvection, fivo::state<double, 1>>,
+                         HasDensity<LinearAdvection, fivo::state<double, 1>>,
+                         HasVelocity<LinearAdvection, fivo::state<double, 1>>,
                          HasRiemannSolver<LinearAdvection, fivo::state<double, 1>> {
-  using System::state_type;
-  using System::global_state_type;
-  using System::value_type;
+  using base_type = System<LinearAdvection, fivo::state<double, 1>>;
+  using state_type = typename base_type::state_type;
+  using global_state_type = typename base_type::global_state_type;
+  using value_type = typename base_type::value_type;
 
-  using BC = System<state_type>::BC;
+  using BC = typename base_type::BC;
   struct BCReflective : BC {
     static inline auto make() { return std::make_shared<BCReflective>(); }
     state_type compute(Mesh const& mesh, value_type const& t,
@@ -254,20 +256,20 @@ struct LinearAdvection : System<fivo::state<double, 1>>,
                   std::shared_ptr<BC> const& left_bc,
                   std::shared_ptr<BC> const& right_bc,
                   value_type const& v)
-    : System(mesh, left_bc, right_bc), m_v(v) {}
+    : base_type(mesh, left_bc, right_bc), m_v(v) {}
 
   value_type m_v;
 
-  value_type density(state_type const& s) const override { return s[0]; }
-  value_type velocity(state_type const&) const override { return m_v; }
+  value_type density(state_type const& s) const { return s[0]; }
+  value_type velocity(state_type const&) const { return m_v; }
   value_type velocity() const { return m_v; }
   LinearAdvection& velocity(value_type const& value) { m_v = value; return *this; }
 
-  state_type flux(state_type const& s) const override { return m_v * s; }
-  state_type wave_speeds(state_type const& /* s */) const override { return state_type{m_v}; }
-  bool admissible(state_type const&) const override { return true; }
-  state_type prim_to_cons(state_type const& s) const override { return s; }
-  state_type cons_to_prim(state_type const& s) const override { return s; }
+  state_type flux(state_type const& s) const { return m_v * s; }
+  state_type wave_speeds(state_type const& /* s */) const { return state_type{m_v}; }
+  bool admissible(state_type const&) const { return true; }
+  state_type prim_to_cons(state_type const& s) const { return s; }
+  state_type cons_to_prim(state_type const& s) const { return s; }
 
   auto solve_riemann(state_type const& left, state_type const& right) const {
     return [&] (value_type const&) { return  (m_v > 0) ? left : right; };
@@ -275,15 +277,16 @@ struct LinearAdvection : System<fivo::state<double, 1>>,
 };
 
 /* LWR MODEL FOR TRAFFIC FLOW */
-struct LWRTrafficFlow : System<fivo::state<double, 1>>,
-                        HasDensity<fivo::state<double, 1>>,
-                        HasVelocity<fivo::state<double, 1>>,
+struct LWRTrafficFlow : System<LWRTrafficFlow, fivo::state<double, 1>>,
+                        HasDensity<LWRTrafficFlow, fivo::state<double, 1>>,
+                        HasVelocity<LWRTrafficFlow, fivo::state<double, 1>>,
                         HasRiemannSolver<LWRTrafficFlow, fivo::state<double, 1>> {
-  using System::state_type;
-  using System::global_state_type;
-  using System::value_type;
+  using base_type = System<LWRTrafficFlow, fivo::state<double, 1>>;
+  using state_type = typename base_type::state_type;
+  using global_state_type = typename base_type::global_state_type;
+  using value_type = typename base_type::value_type;
 
-  using BC = System<state_type>::BC;
+  using BC = typename base_type::BC;
   struct BCReflective : BC {
     static inline auto make() { return std::make_shared<BCReflective>(); }
     state_type compute(Mesh const& mesh, value_type const& t,
@@ -311,23 +314,22 @@ struct LWRTrafficFlow : System<fivo::state<double, 1>>,
                  std::shared_ptr<BC> const& right_bc,
                  value_type const& rmax,
                  value_type const& umax)
-    : System(mesh, left_bc, right_bc), m_rmax(rmax), m_umax(umax) {}
+    : base_type(mesh, left_bc, right_bc), m_rmax(rmax), m_umax(umax) {}
 
   value_type m_rmax, m_umax;
 
   value_type rmax() const { return m_rmax; }
   value_type umax() const { return m_umax; }
 
-  value_type density(state_type const& s) const override { return s[0]; }
-  value_type velocity(state_type const& s) const override { return m_umax * (1 - s[0] / m_rmax); }
-
-  state_type flux(state_type const& s) const override { return s * velocity(s); }
-  state_type wave_speeds(state_type const& s) const override {
+  value_type density(state_type const& s) const { return s[0]; }
+  value_type velocity(state_type const& s) const { return m_umax * (1 - s[0] / m_rmax); }
+  state_type flux(state_type const& s) const { return s * velocity(s); }
+  state_type wave_speeds(state_type const& s) const {
     return state_type{m_umax * (1 - 2 * s[0] / m_rmax)};
   }
-  bool admissible(state_type const& s) const override { return (s[0] > 0 && s[0] < m_rmax); }
-  state_type prim_to_cons(state_type const& s) const override { return s; }
-  state_type cons_to_prim(state_type const& s) const override { return s; }
+  bool admissible(state_type const& s) const { return (s[0] > 0 && s[0] < m_rmax); }
+  state_type prim_to_cons(state_type const& s) const { return s; }
+  state_type cons_to_prim(state_type const& s) const { return s; }
 
   auto solve_riemann(state_type const& left, state_type const& right) const {
     auto const& rl = left[0];
@@ -352,14 +354,15 @@ struct LWRTrafficFlow : System<fivo::state<double, 1>>,
 };
 
 /* BURGERS EQUATION */
-struct Burgers : System<fivo::state<double, 1>>,
-                 HasVelocity<fivo::state<double, 1>>,
+struct Burgers : System<Burgers, fivo::state<double, 1>>,
+                 HasVelocity<Burgers, fivo::state<double, 1>>,
                  HasRiemannSolver<Burgers, fivo::state<double, 1>> {
-  using System::state_type;
-  using System::global_state_type;
-  using System::value_type;
+  using base_type = System<Burgers, fivo::state<double, 1>>;
+  using state_type = typename base_type::state_type;
+  using global_state_type = typename base_type::global_state_type;
+  using value_type = typename base_type::value_type;
 
-  using BC = System<state_type>::BC;
+  using BC = typename base_type::BC;
   struct BCReflective : BC {
     static inline auto make() { return std::make_shared<BCReflective>(); }
     state_type compute(Mesh const& mesh, value_type const& t,
@@ -384,19 +387,15 @@ struct Burgers : System<fivo::state<double, 1>>,
 
   using System::System;
 
-  value_type velocity(state_type const& s) const override { return s[0]; }
-
-  state_type flux(state_type const& s) const override {
+  value_type velocity(state_type const& s) const { return s[0]; }
+  state_type flux(state_type const& s) const {
     auto const& u = s[0];
     return state_type{0.5 * u * u};
   }
-
-  state_type wave_speeds(state_type const& s) const override { return s; }
-
-  bool admissible(state_type const&) const override { return true; }
-
-  state_type prim_to_cons(state_type const& s) const override { return s; }
-  state_type cons_to_prim(state_type const& s) const override { return s; }
+  state_type wave_speeds(state_type const& s) const { return s; }
+  bool admissible(state_type const&) const { return true; }
+  state_type prim_to_cons(state_type const& s) const { return s; }
+  state_type cons_to_prim(state_type const& s) const { return s; }
 
   auto solve_riemann(state_type const& left, state_type const& right) const {
     auto const& ul = left[0];
@@ -421,12 +420,13 @@ struct Burgers : System<fivo::state<double, 1>>,
 };
 
 /* ELASTIC COMPRESSION WAVES IN A SOLID */
-struct LinearElasticPWaves : System<fivo::state<double, 2>> {
-  using System::state_type;
-  using System::global_state_type;
-  using System::value_type;
+struct LinearElasticPWaves : System<LinearElasticPWaves, fivo::state<double, 2>> {
+  using base_type = System<LinearElasticPWaves, fivo::state<double, 2>>;
+  using state_type = typename base_type::state_type;
+  using global_state_type = typename base_type::global_state_type;
+  using value_type = typename base_type::value_type;
 
-  using BC = System<state_type>::BC;
+  using BC = typename base_type::BC;
   struct BCReflective : BC {
     static inline auto make() { return std::make_shared<BCReflective>(); }
     state_type compute(Mesh const& mesh, value_type const& t,
@@ -455,59 +455,63 @@ struct LinearElasticPWaves : System<fivo::state<double, 2>> {
                       value_type const& rho,
                       value_type const& lambda,
                       value_type const& mu)
-    : System(mesh, left_bc, right_bc), m_rho(rho), m_lambda(lambda), m_mu(mu) {}
+    : base_type(mesh, left_bc, right_bc), m_rho(rho), m_lambda(lambda), m_mu(mu) {}
 
   value_type m_rho, m_lambda, m_mu;
 
-  state_type flux(state_type const& s) const override {
+  state_type flux(state_type const& s) const {
     return {- s[1], - (m_lambda + 2 * m_mu) / m_rho * s[0]};
   }
-  state_type wave_speeds(state_type const& /* s */) const override {
+  state_type wave_speeds(state_type const& /* s */) const {
     auto const c = std::sqrt((m_lambda + 2 * m_mu) / m_rho);
     return state_type{-c, c};
   }
-  bool admissible(state_type const&) const override { return true; }
-  state_type prim_to_cons(state_type const& s) const override { return s; }
-  state_type cons_to_prim(state_type const& s) const override { return s; }
+  bool admissible(state_type const&) const { return true; }
+  state_type prim_to_cons(state_type const& s) const { return s; }
+  state_type cons_to_prim(state_type const& s) const { return s; }
 };
 
-struct LinearElasticSWaves : System<fivo::state<double, 2>> {
-  using System::state_type;
-  using System::global_state_type;
-  using System::value_type;
+struct LinearElasticSWaves : System<LinearElasticSWaves, fivo::state<double, 2>> {
+  using base_type = System<LinearElasticSWaves, fivo::state<double, 2>>;
+  using state_type = typename base_type::state_type;
+  using global_state_type = typename base_type::global_state_type;
+  using value_type = typename base_type::value_type;
 
   LinearElasticSWaves(Mesh const& mesh,
                       std::shared_ptr<BC> const& left_bc,
                       std::shared_ptr<BC> const& right_bc,
                       value_type const& rho,
                       value_type const& mu)
-    : System(mesh, left_bc, right_bc), m_rho(rho), m_mu(mu) {}
+    : base_type(mesh, left_bc, right_bc), m_rho(rho), m_mu(mu) {}
 
   value_type m_rho, m_mu;
 
-  state_type flux(state_type const& s) const override {
+  state_type flux(state_type const& s) const {
     return {- 0.5 * s[1], - 2 * m_mu / m_rho * s[0]};
   }
-  state_type wave_speeds(state_type const& /* s */) const override {
+  state_type wave_speeds(state_type const& /* s */) const {
     auto const c = std::sqrt(m_mu / m_rho);
     return state_type{-c, c};
   }
-  bool admissible(state_type const&) const override { return true; }
-  state_type prim_to_cons(state_type const& s) const override { return s; }
-  state_type cons_to_prim(state_type const& s) const override { return s; }
+  bool admissible(state_type const&) const { return true; }
+  state_type prim_to_cons(state_type const& s) const { return s; }
+  state_type cons_to_prim(state_type const& s) const { return s; }
 };
 
 /* LINEAR ACOUSTICS EQUATIONS : PRESSURE-VELOCITY FORMULATION */
-struct LinearAcousticsPressure : System<fivo::state<double, 2>>,
-                                 HasDensity<fivo::state<double, 2>>,
-                                 HasPressure<fivo::state<double, 2>>,
-                                 HasVelocity<fivo::state<double, 2>>,
-                                 HasRiemannSolver<LinearAcousticsPressure, fivo::state<double, 2>> {
-  using System::state_type;
-  using System::global_state_type;
-  using System::value_type;
+struct LinearAcousticsPressure
+  : System<LinearAcousticsPressure, fivo::state<double, 2>>,
+    HasDensity<LinearAcousticsPressure, fivo::state<double, 2>>,
+    HasPressure<LinearAcousticsPressure, fivo::state<double, 2>>,
+    HasVelocity<LinearAcousticsPressure, fivo::state<double, 2>>,
+    HasRiemannSolver<LinearAcousticsPressure, fivo::state<double, 2>> {
 
-  using BC = System<state_type>::BC;
+  using base_type = System<LinearAcousticsPressure, fivo::state<double, 2>>;
+  using state_type = typename base_type::state_type;
+  using global_state_type = typename base_type::global_state_type;
+  using value_type = typename base_type::value_type;
+
+  using BC = typename base_type::BC;
   struct BCReflective : BC {
     static inline auto make() { return std::make_shared<BCReflective>(); }
     state_type compute(Mesh const& mesh, value_type const& t,
@@ -536,27 +540,23 @@ struct LinearAcousticsPressure : System<fivo::state<double, 2>>,
                           value_type const& c,
                           value_type const& r0,
                           value_type const& u0 = 0)
-    : System(mesh, left_bc, right_bc), m_c(c), m_r0(r0), m_u0(u0) {}
+    : base_type(mesh, left_bc, right_bc), m_c(c), m_r0(r0), m_u0(u0) {}
 
   value_type m_c, m_r0, m_u0;
 
-  value_type density(state_type const& s) const override { return s[0] / (m_c * m_c); }
-  value_type pressure(state_type const& s) const override { return s[0]; }
-  value_type velocity(state_type const& s) const override { return s[1]; }
-
-  state_type flux(state_type const& s) const override {
+  value_type density(state_type const& s) const { return s[0] / (m_c * m_c); }
+  value_type pressure(state_type const& s) const { return s[0]; }
+  value_type velocity(state_type const& s) const { return s[1]; }
+  state_type flux(state_type const& s) const {
     return {m_u0 * s[0] + m_r0 * m_c * m_c * s[1],
             s[0] / m_r0 + m_u0 * s[1]};
   }
-
-  state_type wave_speeds(state_type const& /* s */) const override {
+  state_type wave_speeds(state_type const& /* s */) const {
     return state_type{m_u0 - m_c, m_u0 + m_c};
   }
-
-  bool admissible(state_type const&) const override { return true; }
-
-  state_type prim_to_cons(state_type const& s) const override { return s; }
-  state_type cons_to_prim(state_type const& s) const override { return s; }
+  bool admissible(state_type const&) const { return true; }
+  state_type prim_to_cons(state_type const& s) const { return s; }
+  state_type cons_to_prim(state_type const& s) const { return s; }
 
   auto solve_riemann(state_type const& left, state_type const& right) const {
     auto const& pl = left[0];
@@ -578,16 +578,19 @@ struct LinearAcousticsPressure : System<fivo::state<double, 2>>,
 };
 
 /* LINEAR ACOUSTICS EQUATIONS : DENSITY-VELOCITY FORMULATION */
-struct LinearAcousticsDensity : System<fivo::state<double, 2>>,
-                                HasDensity<fivo::state<double, 2>>,
-                                HasPressure<fivo::state<double, 2>>,
-                                HasVelocity<fivo::state<double, 2>>,
-                                HasRiemannSolver<LinearAcousticsDensity, fivo::state<double, 2>> {
-  using System::state_type;
-  using System::global_state_type;
-  using System::value_type;
+struct LinearAcousticsDensity
+  : System<LinearAcousticsDensity, fivo::state<double, 2>>,
+    HasDensity<LinearAcousticsDensity, fivo::state<double, 2>>,
+    HasPressure<LinearAcousticsDensity, fivo::state<double, 2>>,
+    HasVelocity<LinearAcousticsDensity, fivo::state<double, 2>>,
+    HasRiemannSolver<LinearAcousticsDensity, fivo::state<double, 2>> {
 
-  using BC = System<state_type>::BC;
+  using base_type = System<LinearAcousticsDensity, fivo::state<double, 2>>;
+  using state_type = typename base_type::state_type;
+  using global_state_type = typename base_type::global_state_type;
+  using value_type = typename base_type::value_type;
+
+  using BC = typename base_type::BC;
   struct BCReflective : BC {
     static inline auto make() { return std::make_shared<BCReflective>(); }
     state_type compute(Mesh const& mesh, value_type const& t,
@@ -616,27 +619,23 @@ struct LinearAcousticsDensity : System<fivo::state<double, 2>>,
                          value_type const& c,
                          value_type const& r0,
                          value_type const& u0 = 0)
-    : System(mesh, left_bc, right_bc), m_c(c), m_r0(r0), m_u0(u0) {}
+    : base_type(mesh, left_bc, right_bc), m_c(c), m_r0(r0), m_u0(u0) {}
 
   value_type m_c, m_r0, m_u0;
 
-  value_type density(state_type const& s) const override { return s[0]; }
-  value_type pressure(state_type const& s) const override { return m_c * m_c * s[0]; }
-  value_type velocity(state_type const& s) const override { return s[1]; }
-
-  state_type flux(state_type const& s) const override {
+  value_type density(state_type const& s) const { return s[0]; }
+  value_type pressure(state_type const& s) const { return m_c * m_c * s[0]; }
+  value_type velocity(state_type const& s) const { return s[1]; }
+  state_type flux(state_type const& s) const {
     return {m_u0 * s[0] + m_r0 * s[1],
             m_c * m_c / m_r0 * s[0] + m_u0 * s[1]};
   }
-
-  state_type wave_speeds(state_type const& /* s */) const override {
+  state_type wave_speeds(state_type const& /* s */) const {
     return state_type{m_u0 - m_c, m_u0 + m_c};
   }
-
-  bool admissible(state_type const&) const override { return true; }
-
-  state_type prim_to_cons(state_type const& s) const override { return s; }
-  state_type cons_to_prim(state_type const& s) const override { return s; }
+  bool admissible(state_type const&) const { return true; }
+  state_type prim_to_cons(state_type const& s) const { return s; }
+  state_type cons_to_prim(state_type const& s) const { return s; }
 
   auto solve_riemann(state_type const& left, state_type const& right) const {
     auto const& rl = left[0];
@@ -658,15 +657,16 @@ struct LinearAcousticsDensity : System<fivo::state<double, 2>>,
 };
 
 /* SHALLOW WATER EQUATIONS */
-struct SWE : System<fivo::state<double, 2>>,
-             HasVelocity<fivo::state<double, 2>>,
+struct SWE : System<SWE, fivo::state<double, 2>>,
+             HasVelocity<SWE, fivo::state<double, 2>>,
              HasRiemannSolver<SWE, fivo::state<double, 2>> {
-  using System::state_type;
-  using System::global_state_type;
-  using System::value_type;
+  using base_type = System<SWE, fivo::state<double, 2>>;
+  using state_type = typename base_type::state_type;
+  using global_state_type = typename base_type::global_state_type;
+  using value_type = typename base_type::value_type;
 
   /* BOUNDARY CONDITIONS */
-  using BC = System<state_type>::BC;
+  using BC = typename base_type::BC;
   struct BCReflective : BC {
     static inline auto make() { return std::make_shared<BCReflective>(); }
     state_type compute(Mesh const& mesh, value_type const& t,
@@ -759,7 +759,7 @@ struct SWE : System<fivo::state<double, 2>>,
       std::shared_ptr<BC> const& right_bc,
       value_type const& grav,
       std::shared_ptr<FrictionModel> const& fmodel = std::make_shared<NoFriction>(0))
-    : System(mesh, left_bc, right_bc), m_grav(grav), m_fmodel(fmodel)
+    : base_type(mesh, left_bc, right_bc), m_grav(grav), m_fmodel(fmodel)
   {
     // Create empty topography
     topography([](value_type const&) { return 0.; },
@@ -811,24 +811,23 @@ struct SWE : System<fivo::state<double, 2>>,
     return *this;
   }
 
-  value_type velocity(state_type const& s) const override { return s[1] / s[0]; }
-
-  state_type flux(state_type const& s) const override {
+  value_type velocity(state_type const& s) const { return s[1] / s[0]; }
+  state_type flux(state_type const& s) const {
     auto const& [h, j] = s;
     return state_type{j, j * j / h + 0.5 * m_grav * h * h};
   }
-  state_type wave_speeds(state_type const& s) const override {
+  state_type wave_speeds(state_type const& s) const {
     auto const h = s[0];
     auto const u = s[1] / h;
     auto const c = std::sqrt(m_grav * h);
     return state_type{u - c, u + c};
   }
-  bool admissible(state_type const& s) const override { return s[0] > 0; }
-  state_type prim_to_cons(state_type const& s) const override {
+  bool admissible(state_type const& s) const { return s[0] > 0; }
+  state_type prim_to_cons(state_type const& s) const {
     auto const& [h, u] = s;
     return state_type{h, h * u};
   }
-  state_type cons_to_prim(state_type const& s) const override {
+  state_type cons_to_prim(state_type const& s) const {
     auto const& [h, j] = s;
     return state_type{h, j / h};
   }
@@ -931,14 +930,15 @@ struct SWE : System<fivo::state<double, 2>>,
 };
 
 /* TELEGRAPH EQUATIONS */
-struct Telegraph : System<fivo::state<double, 2>>,
+struct Telegraph : System<Telegraph, fivo::state<double, 2>>,
                    HasRiemannSolver<Telegraph, fivo::state<double, 2>> {
-  using System::state_type;
-  using System::global_state_type;
-  using System::value_type;
+  using base_type = System<Telegraph, fivo::state<double, 2>>;
+  using state_type = typename base_type::state_type;
+  using global_state_type = typename base_type::global_state_type;
+  using value_type = typename base_type::value_type;
 
   /* BOUNDARY CONDITIONS */
-  using BC = System<state_type>::BC;
+  using BC = typename base_type::BC;
   struct BCReflective : BC {
     static inline auto make() { return std::make_shared<BCReflective>(); }
     state_type compute(Mesh const& mesh, value_type const& t,
@@ -966,7 +966,7 @@ struct Telegraph : System<fivo::state<double, 2>>,
             std::shared_ptr<BC> const& right_bc,
             value_type const& velocity,
             value_type const& sigma)
-    : System(mesh, left_bc, right_bc), m_velocity(velocity), m_sigma(sigma)
+    : base_type(mesh, left_bc, right_bc), m_velocity(velocity), m_sigma(sigma)
   {}
 
   value_type m_velocity;
@@ -975,15 +975,15 @@ struct Telegraph : System<fivo::state<double, 2>>,
   auto velocity() const { return m_velocity; }
   auto sigma() const { return m_sigma; }
 
-  state_type flux(state_type const& s) const override {
+  state_type flux(state_type const& s) const {
     return state_type{m_velocity * s[0], -m_velocity * s[1]};
   }
-  state_type wave_speeds(state_type const& /* s */) const override {
+  state_type wave_speeds(state_type const& /* s */) const {
     return state_type{-m_velocity, m_velocity};
   }
-  bool admissible(state_type const& s) const override { return (s[0] > 0 && s[1] > 0); }
-  state_type prim_to_cons(state_type const& s) const override { return s; }
-  state_type cons_to_prim(state_type const& s) const override { return s; }
+  bool admissible(state_type const& s) const { return (s[0] > 0 && s[1] > 0); }
+  state_type prim_to_cons(state_type const& s) const { return s; }
+  state_type cons_to_prim(state_type const& s) const { return s; }
 
   global_state_type source(Mesh const& mesh, value_type const& /* t */,
                            global_state_type const& X) const override {
@@ -1005,16 +1005,17 @@ struct Telegraph : System<fivo::state<double, 2>>,
 };
 
 /* ISENTROPIC EULER EQUATIONS */
-struct IsentropicEuler : System<fivo::state<double, 2>>,
-                         HasDensity<fivo::state<double, 2>>,
-                         HasVelocity<fivo::state<double, 2>>,
-                         HasPressure<fivo::state<double, 2>> {
-  using System::state_type;
-  using System::global_state_type;
-  using System::value_type;
+struct IsentropicEuler : System<IsentropicEuler, fivo::state<double, 2>>,
+                         HasDensity<IsentropicEuler, fivo::state<double, 2>>,
+                         HasVelocity<IsentropicEuler, fivo::state<double, 2>>,
+                         HasPressure<IsentropicEuler, fivo::state<double, 2>> {
+  using base_type = System<IsentropicEuler, fivo::state<double, 2>>;
+  using state_type = typename base_type::state_type;
+  using global_state_type = typename base_type::global_state_type;
+  using value_type = typename base_type::value_type;
 
   /* BOUNDARY CONDITIONS */
-  using BC = System<state_type>::BC;
+  using BC = typename base_type::BC;
   struct BCReflective : BC {
     static inline auto make() { return std::make_shared<BCReflective>(); }
     state_type compute(Mesh const& mesh, value_type const& t,
@@ -1042,37 +1043,36 @@ struct IsentropicEuler : System<fivo::state<double, 2>>,
                   std::shared_ptr<BC> const& right_bc,
                   value_type const& kappa,
                   value_type const& gamma)
-    : System(mesh, left_bc, right_bc), m_kappa(kappa), m_gamma(gamma) {}
+    : base_type(mesh, left_bc, right_bc), m_kappa(kappa), m_gamma(gamma) {}
 
   value_type m_kappa, m_gamma;
 
   auto kappa() const { return m_kappa; }
   auto gamma() const { return m_gamma; }
 
-  value_type density(state_type const& s) const override { return s[0]; }
-  value_type velocity(state_type const& s) const override { return s[1] / s[0]; }
-  value_type pressure(state_type const& s) const override {
+  value_type density(state_type const& s) const { return s[0]; }
+  value_type velocity(state_type const& s) const { return s[1] / s[0]; }
+  value_type pressure(state_type const& s) const {
     return m_kappa * std::pow(s[0], m_gamma);
   }
-
-  state_type flux(state_type const& s) const override {
+  state_type flux(state_type const& s) const {
     auto const p = pressure(s);
     auto const& [r, j] = s;
     auto const u = j / r;
     return state_type{j, r * u * u + p};
   }
-  state_type wave_speeds(state_type const& s) const override {
+  state_type wave_speeds(state_type const& s) const {
     auto const p = pressure(s);
     auto const& [r, u] = cons_to_prim(s);
     auto const c = std::sqrt(m_gamma * p / r);
     return state_type{u - c, u + c};
   }
-  bool admissible(state_type const& s) const override { return (s[0] > 0); }
-  state_type prim_to_cons(state_type const& s) const override {
+  bool admissible(state_type const& s) const { return (s[0] > 0); }
+  state_type prim_to_cons(state_type const& s) const {
     auto const& [r, u] = s;
     return state_type{r, r * u};
   }
-  state_type cons_to_prim(state_type const& s) const override {
+  state_type cons_to_prim(state_type const& s) const {
     auto const& [r, j] = s;
     return state_type{r, j / r};
   }
@@ -1170,16 +1170,17 @@ struct IsentropicEuler : System<fivo::state<double, 2>>,
 };
 
 /* ISOTHERMAL EULER EQUATIONS */
-struct IsothermalEuler : System<fivo::state<double, 2>>,
-                         HasDensity<fivo::state<double, 2>>,
-                         HasVelocity<fivo::state<double, 2>>,
-                         HasPressure<fivo::state<double, 2>> {
-  using System::state_type;
-  using System::global_state_type;
-  using System::value_type;
+struct IsothermalEuler : System<IsothermalEuler, fivo::state<double, 2>>,
+                         HasDensity<IsothermalEuler, fivo::state<double, 2>>,
+                         HasVelocity<IsothermalEuler, fivo::state<double, 2>>,
+                         HasPressure<IsothermalEuler, fivo::state<double, 2>> {
+  using base_type = System<IsothermalEuler, fivo::state<double, 2>>;
+  using state_type = typename base_type::state_type;
+  using global_state_type = typename base_type::global_state_type;
+  using value_type = typename base_type::value_type;
 
   /* BOUNDARY CONDITIONS */
-  using BC = System<state_type>::BC;
+  using BC = typename base_type::BC;
   struct BCReflective : BC {
     static inline auto make() { return std::make_shared<BCReflective>(); }
     state_type compute(Mesh const& mesh, value_type const& t,
@@ -1204,48 +1205,49 @@ struct IsothermalEuler : System<fivo::state<double, 2>>,
 
   IsothermalEuler(Mesh const& mesh, std::shared_ptr<BC> const& left_bc,
                   std::shared_ptr<BC> const& right_bc, value_type const& c)
-    : System(mesh, left_bc, right_bc), m_c(c) {}
+    : base_type(mesh, left_bc, right_bc), m_c(c) {}
 
   value_type m_c;
 
   auto c() const { return m_c; }
 
-  value_type density(state_type const& s) const override { return s[0]; }
-  value_type velocity(state_type const& s) const override { return s[1] / s[0]; }
-  value_type pressure(state_type const& s) const override { return m_c * m_c * s[0]; }
-
-  state_type flux(state_type const& s) const override {
+  value_type density(state_type const& s) const { return s[0]; }
+  value_type velocity(state_type const& s) const { return s[1] / s[0]; }
+  value_type pressure(state_type const& s) const { return m_c * m_c * s[0]; }
+  state_type flux(state_type const& s) const {
     auto const p = pressure(s);
     auto const& [r, j] = s;
     auto const u = j / r;
     return state_type{j, r * u * u + p};
   }
-  state_type wave_speeds(state_type const& s) const override {
+  state_type wave_speeds(state_type const& s) const {
     auto const u = s[1] / s[0];
     return state_type{u - m_c, u + m_c};
   }
-  bool admissible(state_type const& s) const override { return (s[0] > 0); }
-  state_type prim_to_cons(state_type const& s) const override {
+  bool admissible(state_type const& s) const { return (s[0] > 0); }
+  state_type prim_to_cons(state_type const& s) const {
     auto const& [r, u] = s;
     return state_type{r, r * u};
   }
-  state_type cons_to_prim(state_type const& s) const override {
+  state_type cons_to_prim(state_type const& s) const {
     auto const& [r, j] = s;
     return state_type{r, j / r};
   }
 };
 
 /* GENERAL EULER EQUATIONS (ABSTRACT) */
-struct Euler : System<fivo::state<double, 3>>,
-               HasDensity<fivo::state<double, 3>>,
-               HasVelocity<fivo::state<double, 3>>,
-               HasPressure<fivo::state<double, 3>> {
-  using System::state_type;
-  using System::global_state_type;
-  using System::value_type;
+template<typename Derived>
+struct Euler : System<Euler<Derived>, fivo::state<double, 3>>,
+               HasDensity<Euler<Derived>, fivo::state<double, 3>>,
+               HasVelocity<Euler<Derived>, fivo::state<double, 3>>,
+               HasPressure<Euler<Derived>, fivo::state<double, 3>> {
+  using base_type = System<Euler<Derived>, fivo::state<double, 3>>;
+  using state_type = typename base_type::state_type;
+  using global_state_type = typename base_type::global_state_type;
+  using value_type = typename base_type::value_type;
 
   /* BOUNDARY CONDITIONS */
-  using BC = System<state_type>::BC;
+  using BC = typename base_type::BC;
   struct BCReflective : BC {
     static inline auto make() { return std::make_shared<BCReflective>(); }
     state_type compute(Mesh const& mesh, value_type const& t,
@@ -1270,29 +1272,31 @@ struct Euler : System<fivo::state<double, 3>>,
 
   Euler(Mesh const& mesh, std::shared_ptr<BC> const& left_bc,
         std::shared_ptr<BC> const& right_bc, value_type const& gamma)
-    : System(mesh, left_bc, right_bc), m_gamma(gamma) {}
+    : base_type(mesh, left_bc, right_bc), m_gamma(gamma) {}
 
   value_type m_gamma;
 
   auto gamma() const { return m_gamma; }
 
-  value_type density(state_type const& s) const override { return s[0]; }
-  value_type velocity(state_type const& s) const override { return s[1] / s[0]; }
-
-  state_type flux(state_type const& s) const override {
-    auto const p = pressure(s);
+  value_type pressure(state_type const& s) const {
+    return static_cast<Derived const*>(this)->pressure(s);
+  }
+  value_type density(state_type const& s) const { return s[0]; }
+  value_type velocity(state_type const& s) const { return s[1] / s[0]; }
+  state_type flux(state_type const& s) const {
+    auto const p = this->pressure(s);
     auto const& [r, j, e] = s;
     auto const u = j / r;
     return state_type{j, r * u * u + p, (e + p) * u};
   }
-  state_type wave_speeds(state_type const& s) const override {
+  state_type wave_speeds(state_type const& s) const {
     auto const p = pressure(s);
     auto const r = s[0];
     auto const u = s[1] / r;
     auto const c = std::sqrt(m_gamma * p / r);
     return state_type{u - c, u, u + c};
   }
-  bool admissible(state_type const& s) const override {
+  bool admissible(state_type const& s) const {
     auto const r = s[0];
     auto const e = s[2];
     return (r > 0 && e > 0);
@@ -1300,26 +1304,28 @@ struct Euler : System<fivo::state<double, 3>>,
 };
 
 /* GENERAL EULER EQUATIONS WITH AN IDEAL GAS EOS */
-struct IdealGasEuler : Euler, HasRiemannSolver<IdealGasEuler, typename Euler::state_type> {
-  using Euler::state_type;
-  using Euler::global_state_type;
-  using Euler::value_type;
+struct IdealGasEuler : Euler<IdealGasEuler>,
+                       HasRiemannSolver<IdealGasEuler,
+                                        typename Euler<IdealGasEuler>::state_type> {
+  using base_type = Euler;
+  using state_type = typename base_type::state_type;
+  using global_state_type = typename base_type::global_state_type;
+  using value_type = typename base_type::value_type;
+
   using Euler::Euler;
 
-  value_type pressure(state_type const& s) const override {
+  value_type pressure(state_type const& s) const {
     auto const& [r, j, e] = s;
     return (m_gamma - 1) * (e - 0.5 * j * j / r);
   }
-
   value_type energy(value_type const& r, value_type const& u, value_type const& p) const {
     return p / (m_gamma - 1) + 0.5 * r * u * u;
   }
-
-  state_type prim_to_cons(state_type const& s) const override {
+  state_type prim_to_cons(state_type const& s) const {
     auto const& [r, u, p] = s;
     return state_type{r, r * u, energy(r, u, p)};
   }
-  state_type cons_to_prim(state_type const& s) const override {
+  state_type cons_to_prim(state_type const& s) const {
     auto const& [r, j, e] = s;
     return state_type{r, j / r, pressure(s)};
   }
@@ -1437,33 +1443,34 @@ struct IdealGasEuler : Euler, HasRiemannSolver<IdealGasEuler, typename Euler::st
 };
 
 /* GENERAL EULER EQUATIONS WITH A COVOLUME GAS EOS */
-struct CovolumeGasEuler : Euler, HasRiemannSolver<CovolumeGasEuler, typename Euler::state_type> {
-  using Euler::state_type;
-  using Euler::global_state_type;
-  using Euler::value_type;
+struct CovolumeGasEuler : Euler<CovolumeGasEuler>,
+                          HasRiemannSolver<CovolumeGasEuler,
+                                           typename Euler<CovolumeGasEuler>::state_type> {
+  using base_type = Euler;
+  using state_type = typename base_type::state_type;
+  using global_state_type = typename base_type::global_state_type;
+  using value_type = typename base_type::value_type;
 
   CovolumeGasEuler(Mesh const& mesh,
                    std::shared_ptr<BC> const& left_bc,
                    std::shared_ptr<BC> const& right_bc,
                    value_type const& gamma, value_type const& b)
-    : Euler(mesh, left_bc, right_bc, gamma), m_b(b) {}
+    : base_type(mesh, left_bc, right_bc, gamma), m_b(b) {}
 
   value_type m_b;
 
-  value_type pressure(state_type const& s) const override {
+  value_type pressure(state_type const& s) const {
     auto const& [r, j, e] = s;
     return (m_gamma - 1) * (e - 0.5 * j * j / r) / (1 - m_b * r);
   }
-
   value_type energy(value_type const& r, value_type const& u, value_type const& p) const {
     return p * (1 - m_b * r) / (m_gamma - 1) + 0.5 * r * u * u;
   }
-
-  state_type prim_to_cons(state_type const& s) const override {
+  state_type prim_to_cons(state_type const& s) const {
     auto const& [r, u, p] = s;
     return state_type{r, r * u, energy(r, u, p)};
   }
-  state_type cons_to_prim(state_type const& s) const override {
+  state_type cons_to_prim(state_type const& s) const {
     auto const& [r, j, e] = s;
     return state_type{r, j / r, pressure(s)};
   }
@@ -1581,10 +1588,11 @@ struct CovolumeGasEuler : Euler, HasRiemannSolver<CovolumeGasEuler, typename Eul
 };
 
 /* GENERAL EULER EQUATIONS WITH A STIFFENED GAS EOS */
-struct StiffenedGasEuler : Euler {
-  using Euler::state_type;
-  using Euler::global_state_type;
-  using Euler::value_type;
+struct StiffenedGasEuler : Euler<StiffenedGasEuler> {
+  using base_type = Euler;
+  using state_type = typename base_type::state_type;
+  using global_state_type = typename base_type::global_state_type;
+  using value_type = typename base_type::value_type;
 
   StiffenedGasEuler(Mesh const& mesh, std::shared_ptr<BC> const& left_bc,
                     std::shared_ptr<BC> const& right_bc, value_type const& gamma,
@@ -1594,38 +1602,41 @@ struct StiffenedGasEuler : Euler {
   value_type m_p0;
   auto p0() const { return m_p0; }
 
-  value_type pressure(state_type const& s) const override {
+  value_type pressure(state_type const& s) const {
     auto const& [r, j, e] = s;
     return (m_gamma - 1) * (e - 0.5 * j * j / r) - m_gamma * m_p0;
   }
-
   value_type energy(value_type const& r, value_type const& u, value_type const& p) const {
     return (p + m_gamma * m_p0) / (m_gamma - 1) + 0.5 * r * u * u;
   }
-
-  state_type prim_to_cons(state_type const& s) const override {
+  state_type prim_to_cons(state_type const& s) const {
     auto const& [r, u, p] = s;
     return state_type{r, r * u, energy(r, u, p)};
   }
-  state_type cons_to_prim(state_type const& s) const override {
+  state_type cons_to_prim(state_type const& s) const {
     auto const& [r, j, e] = s;
     return state_type{r, j / r, pressure(s)};
   }
 };
 
 /* GENERAL EULER EQUATIONS WITH PASSIVE SCALARS (ABSTRACT) */
-template<std::size_t NumPassiveScalars = 0>
-struct EulerP : System<fivo::state<double, 3 + NumPassiveScalars>>,
-                HasDensity<fivo::state<double, 3 + NumPassiveScalars>>,
-                HasVelocity<fivo::state<double, 3 + NumPassiveScalars>>,
-                HasPressure<fivo::state<double, 3 + NumPassiveScalars>> {
-  using state_type = fivo::state<double, 3 + NumPassiveScalars>;
-  using global_state_type = typename System<state_type>::global_state_type;
-  using value_type = typename System<state_type>::value_type;
+template<typename Derived, std::size_t NumPassiveScalars = 0>
+struct EulerP
+  : System<EulerP<Derived, NumPassiveScalars>, fivo::state<double, 3 + NumPassiveScalars>>,
+  HasDensity<EulerP<Derived, NumPassiveScalars>, fivo::state<double, 3 + NumPassiveScalars>>,
+  HasVelocity<EulerP<Derived, NumPassiveScalars>, fivo::state<double, 3 + NumPassiveScalars>>,
+  HasPressure<EulerP<Derived, NumPassiveScalars>, fivo::state<double, 3 + NumPassiveScalars>> {
+
+  using base_type = System<EulerP<Derived, NumPassiveScalars>,
+                           fivo::state<double, 3 + NumPassiveScalars>>;
+  using state_type = typename base_type::state_type;
+  using global_state_type = typename base_type::global_state_type;
+  using value_type = typename base_type::value_type;
+
   static constexpr std::size_t num_passive_scalars = NumPassiveScalars;
 
   /* BOUNDARY CONDITIONS */
-  using BC = typename System<state_type>::BC;
+  using BC = typename base_type::BC;
   struct BCReflective : BC {
     static inline auto make() { return std::make_shared<BCReflective>(); }
     state_type compute(Mesh const& mesh, value_type const& t,
@@ -1652,16 +1663,18 @@ struct EulerP : System<fivo::state<double, 3 + NumPassiveScalars>>,
 
   EulerP(Mesh const& mesh, std::shared_ptr<BC> const& left_bc,
          std::shared_ptr<BC> const& right_bc, value_type const& gamma)
-    : System<state_type>(mesh, left_bc, right_bc), m_gamma(gamma) {}
+    : base_type(mesh, left_bc, right_bc), m_gamma(gamma) {}
 
   value_type m_gamma;
 
   auto gamma() const { return m_gamma; }
 
-  value_type density(state_type const& s) const override { return s[0]; }
-  value_type velocity(state_type const& s) const override { return s[1] / s[0]; }
-
-  state_type flux(state_type const& s) const override {
+  value_type pressure(state_type const& s) const {
+    return static_cast<Derived const*>(this)->pressure(s);
+  }
+  value_type density(state_type const& s) const { return s[0]; }
+  value_type velocity(state_type const& s) const { return s[1] / s[0]; }
+  state_type flux(state_type const& s) const {
     auto const p = this->pressure(s);
     auto const& r = s[0];
     auto const& j = s[1];
@@ -1671,7 +1684,7 @@ struct EulerP : System<fivo::state<double, 3 + NumPassiveScalars>>,
     for (std::size_t i = 0; i < num_passive_scalars; ++i) { fl[3 + i] = u * s[3 + i]; }
     return fl;
   }
-  state_type wave_speeds(state_type const& s) const override {
+  state_type wave_speeds(state_type const& s) const {
     auto const p = this->pressure(s);
     auto const r = s[0];
     auto const u = s[1] / r;
@@ -1680,7 +1693,7 @@ struct EulerP : System<fivo::state<double, 3 + NumPassiveScalars>>,
     for (std::size_t i = 0; i < num_passive_scalars; ++i) { ws[3 + i] = u; }
     return ws;
   }
-  bool admissible(state_type const& s) const override {
+  bool admissible(state_type const& s) const {
     auto const r = s[0];
     auto const e = s[2];
     return (r > 0 && e > 0);
@@ -1689,27 +1702,29 @@ struct EulerP : System<fivo::state<double, 3 + NumPassiveScalars>>,
 
 /* GENERAL EULER EQUATIONS WITH AN IDEAL GAS EOS */
 template<std::size_t NumPassiveScalars = 0>
-struct IdealGasEulerP : EulerP<NumPassiveScalars>,
+struct IdealGasEulerP : EulerP<IdealGasEulerP<NumPassiveScalars>, NumPassiveScalars>,
   HasRiemannSolver<IdealGasEulerP<NumPassiveScalars>,
-                   typename EulerP<NumPassiveScalars>::state_type> {
-  using state_type = typename EulerP<NumPassiveScalars>::state_type;
-  using global_state_type = typename EulerP<NumPassiveScalars>::global_state_type;
-  using value_type = typename EulerP<NumPassiveScalars>::value_type;
-  using EulerP<NumPassiveScalars>::EulerP;
-  using EulerP<NumPassiveScalars>::num_passive_scalars;
+                   typename EulerP<IdealGasEulerP<NumPassiveScalars>,
+                                   NumPassiveScalars>::state_type> {
 
-  value_type pressure(state_type const& s) const override {
+  using base_type = EulerP<IdealGasEulerP<NumPassiveScalars>, NumPassiveScalars>;
+  using state_type = typename base_type::state_type;
+  using global_state_type = typename base_type::global_state_type;
+  using value_type = typename base_type::value_type;
+
+  using base_type::EulerP;
+  using base_type::num_passive_scalars;
+
+  value_type pressure(state_type const& s) const {
     auto const& r = s[0];
     auto const& j = s[1];
     auto const& e = s[2];
     return (this->m_gamma - 1) * (e - 0.5 * j * j / r);
   }
-
   value_type energy(value_type const& r, value_type const& u, value_type const& p) const {
     return p / (this->m_gamma - 1) + 0.5 * r * u * u;
   }
-
-  state_type prim_to_cons(state_type const& s) const override {
+  state_type prim_to_cons(state_type const& s) const {
     auto const& r = s[0];
     auto const& u = s[1];
     auto const& p = s[2];
@@ -1717,7 +1732,7 @@ struct IdealGasEulerP : EulerP<NumPassiveScalars>,
     for (std::size_t i = 0; i < num_passive_scalars; ++i) { cons[3 + i] = r * s[3 + i]; }
     return cons;
   }
-  state_type cons_to_prim(state_type const& s) const override {
+  state_type cons_to_prim(state_type const& s) const {
     auto const& r = s[0];
     auto const& j = s[1];
     state_type prim = {r, j / r, pressure(s)};

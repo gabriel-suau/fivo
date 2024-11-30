@@ -204,7 +204,8 @@ struct HLL : NumericalFlux<HLL> {
 struct HLLC : NumericalFlux<HLLC> {
   static constexpr char const* name() { return "hllc"; }
   template<typename System,
-           std::enable_if_t<traits::is_derived<System, system::Euler>::value, bool> = false>
+           std::enable_if_t<traits::is_derived<System,
+                                               system::Euler<System>>::value, bool> = true>
   auto compute(System const& sys,
                typename System::state_type const& left,
                typename System::state_type const& right) const {
@@ -238,8 +239,9 @@ struct HLLC : NumericalFlux<HLLC> {
   }
 
   template<template<std::size_t> typename System, std::size_t NPS,
-           std::enable_if_t<traits::is_derived<System<NPS>, system::EulerP<NPS>>::value,
-                            bool> = false>
+           std::enable_if_t<
+             traits::is_derived<System<NPS>,
+                                system::EulerP<System<NPS>, NPS>>::value, bool> = true>
   auto compute(System<NPS> const& sys,
                typename System<NPS>::state_type const& left,
                typename System<NPS>::state_type const& right) const {
@@ -267,8 +269,7 @@ struct HLLC : NumericalFlux<HLLC> {
     auto const& pr = rprim[2];
     auto const cstar = (pr - pl + rl * ul * (cl - ul) - rr * ur * (cr - ur))
       / (rl * (cl - ul) - rr * (cr - ur));
-    auto dstar = typename System<NPS>::state_type{0, 1, cstar};
-    for (std::size_t i = 0; i < NPS; ++i) { dstar[3 + i] = 0.; }
+    auto const dstar = typename System<NPS>::state_type{0, 1, cstar};
     auto const plstar = pl + rl * (cl - ul) * (cstar - ul);
     auto const lstar  = (cl * left  - fl + plstar * dstar) / (cl - cstar);
     auto const flstar = fl + cl * (lstar - left);
@@ -278,7 +279,6 @@ struct HLLC : NumericalFlux<HLLC> {
     auto const frstar = fr + cr * (rstar - right);
     return frstar;
   }
-};
 };
 
 } // namespace flux

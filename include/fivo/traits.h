@@ -15,6 +15,8 @@ struct is_derived {
     std::is_base_of_v<Base, Derived> &&
     std::is_convertible_v<const volatile Derived*, const volatile Base*>;
 };
+template<typename Derived, typename Base>
+constexpr bool is_derived_v = is_derived<Derived, Base>::value;
 
 namespace impl {
 
