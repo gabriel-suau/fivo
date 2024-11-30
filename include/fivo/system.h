@@ -1237,11 +1237,11 @@ struct IsothermalEuler : System<IsothermalEuler, fivo::state<double, 2>>,
 
 /* GENERAL EULER EQUATIONS (ABSTRACT) */
 template<typename Derived>
-struct Euler : System<Euler<Derived>, fivo::state<double, 3>>,
-               HasDensity<Euler<Derived>, fivo::state<double, 3>>,
-               HasVelocity<Euler<Derived>, fivo::state<double, 3>>,
-               HasPressure<Euler<Derived>, fivo::state<double, 3>> {
-  using base_type = System<Euler<Derived>, fivo::state<double, 3>>;
+struct Euler : System<Derived, fivo::state<double, 3>>,
+               HasDensity<Derived, fivo::state<double, 3>>,
+               HasVelocity<Derived, fivo::state<double, 3>>,
+               HasPressure<Derived, fivo::state<double, 3>> {
+  using base_type = System<Derived, fivo::state<double, 3>>;
   using state_type = typename base_type::state_type;
   using global_state_type = typename base_type::global_state_type;
   using value_type = typename base_type::value_type;
@@ -1278,19 +1278,16 @@ struct Euler : System<Euler<Derived>, fivo::state<double, 3>>,
 
   auto gamma() const { return m_gamma; }
 
-  value_type pressure(state_type const& s) const {
-    return static_cast<Derived const*>(this)->pressure(s);
-  }
   value_type density(state_type const& s) const { return s[0]; }
   value_type velocity(state_type const& s) const { return s[1] / s[0]; }
   state_type flux(state_type const& s) const {
-    auto const p = this->pressure(s);
+    auto const p = static_cast<Derived const*>(this)->pressure(s);
     auto const& [r, j, e] = s;
     auto const u = j / r;
     return state_type{j, r * u * u + p, (e + p) * u};
   }
   state_type wave_speeds(state_type const& s) const {
-    auto const p = pressure(s);
+    auto const p = static_cast<Derived const*>(this)->pressure(s);
     auto const r = s[0];
     auto const u = s[1] / r;
     auto const c = std::sqrt(m_gamma * p / r);
