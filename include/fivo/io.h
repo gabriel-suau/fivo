@@ -3,26 +3,14 @@
 
 #include "state.h"
 #include "mesh.h"
+#include "traits.h"
+
 #include <string>
 #include <fstream>
 #include <tuple>
 #include <ctime>
 
 namespace fivo {
-
-namespace impl {
-
-template<typename Func, typename Tuple, std::size_t... Is>
-void apply_impl(Func const& func, Tuple const& t, std::index_sequence<Is...>) {
-  (func(std::get<Is>(t)), ...);
-}
-
-template<typename Func, typename... Args>
-void apply(Func const& func, std::tuple<Args...> const& t) {
-  apply_impl(func, t, std::index_sequence_for<Args...>{});
-}
-
-} // namespace impl
 
 class IOManager {
 public:
@@ -55,14 +43,14 @@ public:
 
     // Save the quantities names
     file << "# x";
-    impl::apply([&] (auto const& q) { file << " " << q.first; }, quantities);
+    traits::for_each(quantities, [&] (auto const& q) { file << " " << q.first; });
     file << "\n";
 
     // Save the quantities values
     for (int i = 0; i < m_mesh.nx(); ++i) {
       auto const x = m_mesh.cell_center(i);
       file << x;
-      impl::apply([&] (auto const& q) { file << " " << q.second(x, X[i]); }, quantities);
+      traits::for_each(quantities, [&] (auto const& q) { file << " " << q.second(x, X[i]); });
       file << "\n";
     }
   }
