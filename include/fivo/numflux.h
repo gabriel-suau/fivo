@@ -204,8 +204,7 @@ struct HLL : NumericalFlux<HLL> {
 struct HLLC : NumericalFlux<HLLC> {
   static constexpr char const* name() { return "hllc"; }
   template<typename System,
-           std::enable_if_t<traits::is_derived<System,
-                                               system::Euler<System>>::value, bool> = true>
+           std::enable_if_t<traits::is_derived<System, system::Euler>::value, bool> = true>
   auto compute(System const& sys,
                typename System::state_type const& left,
                typename System::state_type const& right) const {
@@ -239,9 +238,8 @@ struct HLLC : NumericalFlux<HLLC> {
   }
 
   template<template<std::size_t> typename System, std::size_t NPS,
-           std::enable_if_t<
-             traits::is_derived<System<NPS>,
-                                system::EulerP<System<NPS>, NPS>>::value, bool> = true>
+           std::enable_if_t<traits::is_derived<System<NPS>, system::EulerP<NPS>>::value,
+                            bool> = true>
   auto compute(System<NPS> const& sys,
                typename System<NPS>::state_type const& left,
                typename System<NPS>::state_type const& right) const {
