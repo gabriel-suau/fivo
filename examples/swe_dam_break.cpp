@@ -39,20 +39,22 @@ int main() {
                                           std::make_pair("discharge", discharge),
                                           std::make_pair("velocity", velocity));
 
-  auto io = fivo::IOManager("swe_dam_break_rusanov", 1, mesh);
-  auto X = system.create_init_state(mesh, init);
-  fivo::solve(io, system, fivo::flux::Rusanov{}, fivo::time::RK1{}, X, t0, tf, dt, quantities);
-  io.basename("swe_dam_break_hll");
-  X = system.create_init_state(mesh, init);
-  fivo::solve(io, system, fivo::flux::HLL{}, fivo::time::RK1{}, X, t0, tf, dt, quantities);
-  io.basename("swe_dam_break_godunov");
-  X = system.create_init_state(mesh, init);
-  fivo::solve(io, system, fivo::flux::Godunov{}, fivo::time::RK1{}, X, t0, tf, dt, quantities);
+  // Solve and save for each numerical flux
+  auto const fluxes = std::make_tuple(fivo::flux::Rusanov{},
+                                      fivo::flux::HLL{},
+                                      fivo::flux::Godunov{});
+  fivo::traits::for_each
+    (fluxes,
+     [&] (auto const& flux) {
+       auto io = fivo::IOManager(std::string("dam_break_") + flux.name(), 1, mesh);
+       auto X = fivo::discretize(mesh, init);
+       fivo::solve(io, system, flux, fivo::time::RK1{}, X, t0, tf, dt, quantities);
+     });
 
   // Exact solution
   auto const exact = system.solve_riemann(left, right);
-  X = system.create_init_state(mesh, init);
-  io.basename("swe_dam_break_exact");
+  auto X = fivo::discretize(mesh, init);
+  auto io = fivo::IOManager("dam_break_exact", 1, mesh);
   int const nt = (tf - t0) / dt;
   for (int it = 0; it < nt; ++it) {
     auto const t = t0 + it * dt;

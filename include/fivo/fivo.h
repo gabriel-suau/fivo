@@ -9,5 +9,6 @@
 #include <fivo/io.h>
 #include <fivo/solver.h>
 #include <fivo/math.h>
+#include <fivo/discretize.h>
 
 #endif // FIVO_FIVO_H

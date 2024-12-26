@@ -31,11 +31,15 @@ int main() {
                           if (8. < x && x < 12.) return - 0.05 * 2. * (x - 10);
                           return 0.;
                         };
+  auto bumpd = fivo::discretize(mesh, bump);
+  auto dbump_dxd = fivo::discretize(mesh, dbump_dx);
+
   system.topography(bump, dbump_dx);
 
   // Initial value (h, q) as a function of space
-  auto const init = [&] (double const& x) { return state_type{std::max(0.3 + 0.02*std::sin(x) - bump(x), 0.), 0.}; };
-  auto X = system.create_init_state(mesh, init);
+  auto const init = [&] (double const& x) {
+                      return state_type{std::max(0.3 + 0.02*std::sin(x) - bump(x), 0.), 0.};
+                    };
 
   // Output quantities
   auto const topography = [&] (double const& x, state_type const&) { return bump(x); };
@@ -50,11 +54,14 @@ int main() {
                                           std::make_pair("velocity", velocity));
 
   // Solve and save for each numerical flux
-  auto io = fivo::IOManager("swe_rusanov", 20, mesh);
-  io.basename("swe_rusanov");
-  X = system.create_init_state(mesh, init);
-  fivo::solve(io, system, fivo::flux::Rusanov{}, fivo::time::RK1{}, X, t0, tf, dt, quantities);
-  io.basename("swe_hll");
-  X = system.create_init_state(mesh, init);
-  fivo::solve(io, system, fivo::flux::HLL{}, fivo::time::RK1{}, X, t0, tf, dt, quantities);
+  auto const fluxes = std::make_tuple(fivo::flux::Rusanov{},
+                                      fivo::flux::HLL{},
+                                      fivo::flux::Godunov{});
+  fivo::traits::for_each
+    (fluxes,
+     [&] (auto const& flux) {
+       auto io = fivo::IOManager(std::string("swe_") + flux.name(), 1, mesh);
+       auto X = fivo::discretize(mesh, init);
+       fivo::solve(io, system, flux, fivo::time::RK1{}, X, t0, tf, dt, quantities);
+     });
 }

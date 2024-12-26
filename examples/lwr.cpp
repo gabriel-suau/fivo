@@ -20,8 +20,9 @@ int main(int argc, char** argv) {
   // Riemann problem (rarefaction)
   auto const left = state_type{0.8};
   auto const right = state_type{0.2};
-  auto const init = [&] (double const& x) { return (x < 0.5 * (mesh.xmin() + mesh.xmax())) ? left : right; };
-  auto X = system.create_init_state(mesh, init);
+  auto const init = [&] (double const& x) {
+                      return (x < 0.5 * (mesh.xmin() + mesh.xmax())) ? left : right;
+                    };
 
   // Output quantities
   auto const density = [&] (double const&, state_type const& s) { return s[0]; };
@@ -30,19 +31,21 @@ int main(int argc, char** argv) {
                                           std::make_pair("velocity", velocity));
 
   // Solve and save for each numerical flux
-  auto io = fivo::IOManager("traffic_rusanov", 5, mesh);
-  fivo::solve(io, system, fivo::flux::Rusanov{}, fivo::time::RK1{}, X, t0, tf, dt, quantities);
-  io.basename("traffic_hll");
-  X = system.create_init_state(mesh, init);
-  fivo::solve(io, system, fivo::flux::HLL{}, fivo::time::RK1{}, X, t0, tf, dt, quantities);
-  io.basename("traffic_godunov");
-  X = system.create_init_state(mesh, init);
-  fivo::solve(io, system, fivo::flux::Godunov{}, fivo::time::RK1{}, X, t0, tf, dt, quantities);
+  auto const fluxes = std::make_tuple(fivo::flux::Rusanov{},
+                                      fivo::flux::HLL{},
+                                      fivo::flux::Godunov{});
+  fivo::traits::for_each
+    (fluxes,
+     [&] (auto const& flux) {
+       auto io = fivo::IOManager(std::string("traffic_") + flux.name(), 1, mesh);
+       auto X = fivo::discretize(mesh, init);
+       fivo::solve(io, system, flux, fivo::time::RK1{}, X, t0, tf, dt, quantities);
+     });
 
   // Exact solution
   auto const exact = system.solve_riemann(left, right);
-  auto Xe = fivo::global_state<state_type>(mesh.nx());
-  io.basename("traffic_exact");
+  auto Xe = fivo::discretize(mesh, init);
+  auto io = fivo::IOManager("traffic_exact", 1, mesh);
   int const nt = (tf - t0) / dt;
   for (int it = 0; it < nt; ++it) {
     auto const t = t0 + it * dt;

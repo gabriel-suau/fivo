@@ -1,4 +1,4 @@
-#include "../include/fivo/fivo.h"
+#include <fivo/fivo.h>
 
 int main() {
   double const gamma = 1.4;
@@ -43,25 +43,24 @@ int main() {
                                           std::make_pair("concentration", concentration));
 
   // Solve and save for each numerical flux
-  auto io = fivo::IOManager("test_sod_rusanov", 1, mesh);
-  auto X = system.create_init_state(mesh, init);
-  fivo::solve(io, system, fivo::flux::Rusanov{}, fivo::time::RK1{}, X, t0, tf, dt, quantities);
-  io.basename("test_sod_hll");
-  X = system.create_init_state(mesh, init);
-  fivo::solve(io, system, fivo::flux::HLL{}, fivo::time::RK1{}, X, t0, tf, dt, quantities);
-  io.basename("test_sod_hllc");
-  X = system.create_init_state(mesh, init);
-  fivo::solve(io, system, fivo::flux::HLLC{}, fivo::time::RK1{}, X, t0, tf, dt, quantities);
-  io.basename("test_sod_godunov");
-  X = system.create_init_state(mesh, init);
-  fivo::solve(io, system, fivo::flux::Godunov{}, fivo::time::RK1{}, X, t0, tf, dt, quantities);
+  auto const fluxes = std::make_tuple(fivo::flux::Rusanov{},
+                                      fivo::flux::HLL{},
+                                      fivo::flux::HLLC{},
+                                      fivo::flux::Godunov{});
+  fivo::traits::for_each
+    (fluxes,
+     [&] (auto const& flux) {
+       auto io = fivo::IOManager(std::string("test_sod_") + flux.name(), 1, mesh);
+       auto X = fivo::discretize(mesh, init);
+       fivo::solve(io, system, flux, fivo::time::RK1{}, X, t0, tf, dt, quantities);
+     });
 
   // Exact solution
   auto const exact = system.solve_riemann(left, right);
-  X = system.create_init_state(mesh, init);
-  io.basename("test_sod_exact");
+  auto X = fivo::discretize(mesh, init);
+  auto io = fivo::IOManager("test_sod_exact", 1, mesh);
   int const nt = (tf - t0) / dt;
-  for (int it = 0; it < nt; ++it) {
+  for (int it = 0; it <= nt; ++it) {
     auto const t = t0 + it * dt;
     for (int i = 0; i < mesh.nx(); ++i) {
       // The riemann solver is centered in 0, so we have to shift our x-position

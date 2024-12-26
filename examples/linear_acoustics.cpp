@@ -21,12 +21,7 @@ int main(int argc, char** argv) {
   using state_type = typename fivo::system::LinearAcousticsPressure::state_type;
 
   // Initial value : p = gaussian, u = 0
-  auto const init = [&] (double const& x) {
-                      if (x < 0.5 * (mesh.xmin() + mesh.xmax())) return state_type{1.};
-                      else return state_type{0.6};
-                    };
-  // auto const init = [&] (double const& x) { return state_type{std::exp(-0.5 * x * x), 0.}; };
-  auto X = system.create_init_state(mesh, init);
+  auto const init = [&] (double const& x) { return state_type{std::exp(-0.5 * x * x), 0.}; };
 
   // Output quantities
   auto const density  = [&] (double const&, state_type const& s) { return system.density(s); };
@@ -37,9 +32,14 @@ int main(int argc, char** argv) {
                                           std::make_pair("velocity", velocity));
 
   // Solve and save for each numerical flux
-  auto io = fivo::IOManager("acoustics_rusanov", 1, mesh);
-  fivo::solve(io, system, fivo::flux::Rusanov{}, fivo::time::RK1{}, X, t0, tf, dt, quantities);
-  io.basename("acoustics_hll");
-  X = system.create_init_state(mesh, init);
-  fivo::solve(io, system, fivo::flux::HLL{}, fivo::time::RK1{}, X, t0, tf, dt, quantities);
+  auto const fluxes = std::make_tuple(fivo::flux::Rusanov{},
+                                      fivo::flux::HLL{},
+                                      fivo::flux::Godunov{});
+  fivo::traits::for_each
+    (fluxes,
+     [&] (auto const& flux) {
+       auto io = fivo::IOManager(std::string("acoustics_") + flux.name(), 1, mesh);
+       auto X = fivo::discretize(mesh, init);
+       fivo::solve(io, system, flux, fivo::time::RK1{}, X, t0, tf, dt, quantities);
+     });
 }

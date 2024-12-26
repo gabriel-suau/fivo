@@ -190,13 +190,6 @@ struct System {
     return max;
   }
 
-  template<typename InitFunc>
-  auto create_init_state(Mesh const& mesh, InitFunc&& func) const {
-    global_state_type X0(mesh.nx());
-    for (int i = 0; i < mesh.nx(); ++i) { X0[i] = func(mesh.cell_center(i)); }
-    return X0;
-  }
-
   virtual global_state_type source(Mesh const& mesh, value_type const& t,
                                    global_state_type const& X) const {
     return global_state_type(mesh.nx(), {0});
@@ -247,25 +240,24 @@ struct LinearAdvection : System<fivo::state<double, 1>>,
   LinearAdvection(Mesh const& mesh,
                   std::shared_ptr<BC> const& left_bc,
                   std::shared_ptr<BC> const& right_bc,
-                  value_type const& v)
-    : base_type(mesh, left_bc, right_bc), m_v(v) {}
+                  value_type const& velocity)
+    : base_type(mesh, left_bc, right_bc), m_velocity(velocity) {}
 
-  value_type m_v;
+  value_type m_velocity;
 
   value_type density(state_type const& s) const override { return s[0]; }
-  value_type velocity(state_type const&) const  override{ return m_v; }
-  value_type velocity() const { return m_v; }
-  LinearAdvection& velocity(value_type const& value) { m_v = value; return *this; }
-
-  state_type flux(state_type const& s) const override { return m_v * s; }
-  state_type wave_speeds(state_type const& /* s */) const override { return state_type{m_v}; }
+  value_type velocity(state_type const&) const  override{ return m_velocity; }
+  state_type flux(state_type const& s) const override { return m_velocity * s; }
+  state_type wave_speeds(state_type const& /* s */) const override {
+    return state_type{m_velocity};
+  }
   bool admissible(state_type const&) const override { return true; }
   state_type prim_to_cons(state_type const& s) const override { return s; }
   state_type cons_to_prim(state_type const& s) const override { return s; }
 
   auto solve_riemann(state_type const& left, state_type const& right) const {
     return [&] (value_type const& xt) {
-             return (m_v > xt) ? left : right;
+             return (m_velocity > xt) ? left : right;
            };
   }
 };
