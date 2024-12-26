@@ -1,11 +1,11 @@
 #ifndef FIVO_SOLVER_H
 #define FIVO_SOLVER_H
 
-#include "time.h"
-#include "mesh.h"
-#include "state.h"
-#include "system.h"
-#include "io.h"
+#include <fivo/time.h>
+#include <fivo/mesh.h>
+#include <fivo/state.h>
+#include <fivo/system.h>
+#include <fivo/io.h>
 
 namespace fivo {
 

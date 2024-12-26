@@ -1,11 +1,11 @@
 #ifndef FIVO_SYSTEM_H
 #define FIVO_SYSTEM_H
 
-#include "state.h"
-#include "mesh.h"
-#include "vector.h"
-#include "math.h"
-#include "traits.h"
+#include <fivo/state.h>
+#include <fivo/mesh.h>
+#include <fivo/vector.h>
+#include <fivo/math.h>
+#include <fivo/traits.h>
 
 #include <cmath>
 #include <algorithm>

@@ -1,8 +1,8 @@
 #ifndef FIVO_STATE_H
 #define FIVO_STATE_H
 
-#include "array.h"
-#include "vector.h"
+#include <fivo/array.h>
+#include <fivo/vector.h>
 
 namespace fivo {
 

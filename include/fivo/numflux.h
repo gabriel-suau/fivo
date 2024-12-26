@@ -1,10 +1,11 @@
 #ifndef FIVO_NUMFLUX_H
 #define FIVO_NUMFLUX_H
 
+#include <fivo/system.h>
+#include <fivo/mesh.h>
+#include <fivo/traits.h>
+
 #include <algorithm>
-#include "system.h"
-#include "mesh.h"
-#include "traits.h"
 
 namespace fivo {
 

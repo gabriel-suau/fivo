@@ -1,8 +1,6 @@
 #ifndef FIVO_MESH_H
 #define FIVO_MESH_H
 
-#include <vector>
-
 namespace fivo {
 
 struct Mesh {

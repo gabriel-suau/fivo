@@ -1,7 +1,7 @@
 #ifndef FIVO_MATH_H
 #define FIVO_MATH_H
 
-#include "state.h"
+#include <fivo/state.h>
 
 #include <type_traits>
 #include <cmath>
