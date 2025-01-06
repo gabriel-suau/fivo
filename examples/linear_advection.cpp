@@ -15,7 +15,7 @@ int main(int argc, char** argv) {
   auto right_bc = fivo::system::LinearAdvection::BCPeriodic::make();
 
   // Create the system
-  auto system = fivo::system::LinearAdvection(mesh, left_bc, right_bc, v);
+  auto system = fivo::system::LinearAdvection(mesh, left_bc, right_bc, {v});
   using state_type = typename fivo::system::LinearAdvection::state_type;
 
   // Initial value = gaussian
@@ -26,10 +26,10 @@ int main(int argc, char** argv) {
   auto const quantities = std::make_tuple(std::make_pair("concentration", u));
 
   // Solve and save for each numerical flux
-  auto const fluxes = std::make_tuple(fivo::flux::Upwind{},
-                                      fivo::flux::Rusanov{},
-                                      fivo::flux::HLL{},
-                                      fivo::flux::Godunov{});
+  auto const fluxes = std::make_tuple(fivo::numflux::Upwind{},
+                                      fivo::numflux::Rusanov{},
+                                      fivo::numflux::HLL{},
+                                      fivo::numflux::Godunov{});
   fivo::traits::for_each
     (fluxes,
      [&] (auto const& flux) {

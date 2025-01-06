@@ -9,7 +9,7 @@
 
 namespace fivo {
 
-namespace flux {
+namespace numflux {
 
 /**
  * \brief Base class template for numerical fluxes.
@@ -35,8 +35,9 @@ struct NumericalFlux {
   template<typename System>
   auto compute(System const& sys,
                typename System::state_type const& left,
-               typename System::state_type const& right) const {
-    return static_cast<Derived const*>(this)->compute(sys, left, right);
+               typename System::state_type const& right,
+               array<double, 1> const& normal) const {
+    return static_cast<Derived const*>(this)->compute(sys, left, right, normal);
   }
 
   /**
@@ -61,10 +62,10 @@ struct NumericalFlux {
                typename System::state_type const& right_bc,
                typename System::global_state_type const& state) const {
     typename System::global_state_type numflux(state.size() + 1);
-    numflux[0] = compute(sys, left_bc, state.front());
+    numflux[0] = compute(sys, left_bc, state.front(), {1});
     for (std::size_t i = 1; i < numflux.size() - 1; ++i)
-      numflux[i] = compute(sys, state[i-1], state[i]);
-    numflux.back() = compute(sys, state.back(), right_bc);
+      numflux[i] = compute(sys, state[i-1], state[i], {1});
+    numflux.back() = compute(sys, state.back(), right_bc, {1});
     return numflux;
   }
 
@@ -109,14 +110,14 @@ struct NumericalFlux {
                   typename System::state_type const& right_bc,
                   typename System::global_state_type const& state,
                   typename System::global_state_type& source) const {
-    auto numflux = compute(sys, left_bc, state.front());
+    auto numflux = compute(sys, left_bc, state.front(), {1});
     source[0] += numflux;
     for (std::size_t i = 1; i < state.size(); ++i) {
-      numflux = compute(sys, state[i - 1], state[i]);
+      numflux = compute(sys, state[i - 1], state[i], {1});
       source[i - 1] -= numflux;
       source[i] += numflux;
     }
-    numflux = compute(sys, state.back(), right_bc);
+    numflux = compute(sys, state.back(), right_bc, {1});
     source.back() -= numflux;
     source /= mesh.dx();
   }
@@ -131,9 +132,10 @@ struct Upwind : NumericalFlux<Upwind> {
   static constexpr char const* name() { return "upwind"; }
   auto compute(system::LinearAdvection const& sys,
                typename system::LinearAdvection::state_type const& left,
-               typename system::LinearAdvection::state_type const& right) const {
-    auto const v = sys.velocity();
-    return (v > 0) ? sys.flux(left) : sys.flux(right);
+               typename system::LinearAdvection::state_type const& right,
+               array<double, 1> const& normal) const {
+    auto const& v = sys.get_params().velocity;
+    return ((v > 0) ? sys.flux(left) : sys.flux(right)) * normal;
   }
 };
 
@@ -145,11 +147,12 @@ struct Godunov : NumericalFlux<Godunov> {
   template<typename System>
   auto compute(System const& sys,
                typename System::state_type const& left,
-               typename System::state_type const& right) const {
+               typename System::state_type const& right,
+               array<double, 1> const& normal) const {
     static_assert(traits::has_riemann_solver<System>::value,
-                  "fivo::flux::Godunov::compute : input system goes not have an exact Riemann solver.");
+                  "fivo::flux::Godunov::compute : input system does not have an exact Riemann solver.");
     auto exact = sys.solve_riemann(left, right);
-    return sys.flux(exact(0));
+    return sys.flux(exact(0)) * normal;
   }
 };
 
@@ -161,7 +164,8 @@ struct Rusanov : NumericalFlux<Rusanov> {
   template<typename System>
   auto compute(System const& sys,
                typename System::state_type const& left,
-               typename System::state_type const& right) const {
+               typename System::state_type const& right,
+               array<double, 1> const& normal) const {
     auto const fl = sys.flux(left);
     auto const fr = sys.flux(right);
     auto const wsl = sys.wave_speeds(left);
@@ -170,7 +174,7 @@ struct Rusanov : NumericalFlux<Rusanov> {
     auto const lmax = *std::max_element(wsl.begin(), wsl.end(), comp);
     auto const rmax = *std::max_element(wsr.begin(), wsr.end(), comp);
     auto const c = std::max(std::abs(lmax), std::abs(rmax));
-    return 0.5 * (fr + fl - c * (right - left));
+    return 0.5 * ((fr + fl) * normal - c * (right - left));
   }
 };
 
@@ -182,7 +186,8 @@ struct HLL : NumericalFlux<HLL> {
   template<typename System>
   auto compute(System const& sys,
                typename System::state_type const& left,
-               typename System::state_type const& right) const {
+               typename System::state_type const& right,
+               array<double, 1> const& normal) const {
     auto const fl = sys.flux(left);
     auto const fr = sys.flux(right);
     auto const wsl = sys.wave_speeds(left);
@@ -190,12 +195,12 @@ struct HLL : NumericalFlux<HLL> {
     auto const lmin = *std::min_element(wsl.begin(), wsl.end());
     auto const rmin = *std::min_element(wsr.begin(), wsr.end());
     auto const c1 = std::min(lmin, rmin);
-    if (0 <= c1) return fl;
+    if (0 <= c1) return fl * normal;
     auto const lmax = *std::max_element(wsl.begin(), wsl.end());
     auto const rmax = *std::max_element(wsr.begin(), wsr.end());
     auto const c2 = std::max(lmax, rmax);
-    if (c2 <= 0) return fr;
-    return (c2 * fl - c1 * fr + c1 * c2 * (right - left)) / (c2 - c1);
+    if (c2 <= 0) return fr * normal;
+    return ((c2 * fl - c1 * fr) * normal + c1 * c2 * (right - left)) / (c2 - c1);
   }
 };
 
@@ -205,10 +210,11 @@ struct HLL : NumericalFlux<HLL> {
 struct HLLC : NumericalFlux<HLLC> {
   static constexpr char const* name() { return "hllc"; }
   template<typename System,
-           std::enable_if_t<traits::is_derived<System, system::Euler>::value, bool> = true>
+           std::enable_if_t<traits::is_derived<System, system::EulerBase>::value, bool> = true>
   auto compute(System const& sys,
                typename System::state_type const& left,
-               typename System::state_type const& right) const {
+               typename System::state_type const& right,
+               array<double, 1> const& normal) const {
     auto const fl = sys.flux(left);
     auto const fr = sys.flux(right);
     auto const wsl = sys.wave_speeds(left);
@@ -216,11 +222,11 @@ struct HLLC : NumericalFlux<HLLC> {
     auto const lmin = *std::min_element(wsl.begin(), wsl.end());
     auto const rmin = *std::min_element(wsr.begin(), wsr.end());
     auto const cl = std::min(lmin, rmin);
-    if (0 <= cl) return fl;
+    if (0 <= cl) return fl * normal;
     auto const lmax = *std::max_element(wsl.begin(), wsl.end());
     auto const rmax = *std::max_element(wsr.begin(), wsr.end());
     auto const cr = std::max(lmax, rmax);
-    if (cr <= 0) return fr;
+    if (cr <= 0) return fr * normal;
 
     // Compute intermediate state
     auto const& [rl, ul, pl] = sys.cons_to_prim(left);
@@ -229,21 +235,22 @@ struct HLLC : NumericalFlux<HLLC> {
       / (rl * (cl - ul) - rr * (cr - ur));
     auto const dstar = typename System::state_type{0, 1, cstar};
     auto const plstar = pl + rl * (cl - ul) * (cstar - ul);
-    auto const lstar  = (cl * left  - fl + plstar * dstar) / (cl - cstar);
-    auto const flstar = fl + cl * (lstar - left);
+    auto const lstar  = (cl * left - fl * normal + plstar * dstar) / (cl - cstar);
+    auto const flstar = fl * normal + cl * (lstar - left);
     if (0 <= cstar) return flstar;
     auto const prstar = pr + rr * (cr - ur) * (cstar - ur);
-    auto const rstar  = (cr * right - fr + prstar * dstar) / (cr - cstar);
-    auto const frstar = fr + cr * (rstar - right);
+    auto const rstar  = (cr * right - fr * normal + prstar * dstar) / (cr - cstar);
+    auto const frstar = fr * normal + cr * (rstar - right);
     return frstar;
   }
 
   template<template<std::size_t> typename System, std::size_t NPS,
-           std::enable_if_t<traits::is_derived<System<NPS>, system::EulerP<NPS>>::value,
+           std::enable_if_t<traits::is_derived<System<NPS>, system::EulerPBase<NPS>>::value,
                             bool> = true>
   auto compute(System<NPS> const& sys,
                typename System<NPS>::state_type const& left,
-               typename System<NPS>::state_type const& right) const {
+               typename System<NPS>::state_type const& right,
+               array<double, 1> const& normal) const {
     auto const fl = sys.flux(left);
     auto const fr = sys.flux(right);
     auto const wsl = sys.wave_speeds(left);
@@ -251,11 +258,11 @@ struct HLLC : NumericalFlux<HLLC> {
     auto const lmin = *std::min_element(wsl.begin(), wsl.end());
     auto const rmin = *std::min_element(wsr.begin(), wsr.end());
     auto const cl = std::min(lmin, rmin);
-    if (0 <= cl) return fl;
+    if (0 <= cl) return fl * normal;
     auto const lmax = *std::max_element(wsl.begin(), wsl.end());
     auto const rmax = *std::max_element(wsr.begin(), wsr.end());
     auto const cr = std::max(lmax, rmax);
-    if (cr <= 0) return fr;
+    if (cr <= 0) return fr * normal;
 
     // Compute intermediate state
     auto const lprim = sys.cons_to_prim(left);
@@ -270,17 +277,17 @@ struct HLLC : NumericalFlux<HLLC> {
       / (rl * (cl - ul) - rr * (cr - ur));
     auto const dstar = typename System<NPS>::state_type{0, 1, cstar};
     auto const plstar = pl + rl * (cl - ul) * (cstar - ul);
-    auto const lstar  = (cl * left  - fl + plstar * dstar) / (cl - cstar);
-    auto const flstar = fl + cl * (lstar - left);
+    auto const lstar  = (cl * left - fl * normal + plstar * dstar) / (cl - cstar);
+    auto const flstar = fl * normal + cl * (lstar - left);
     if (0 <= cstar) return flstar;
     auto const prstar = pr + rr * (cr - ur) * (cstar - ur);
-    auto const rstar  = (cr * right - fr + prstar * dstar) / (cr - cstar);
-    auto const frstar = fr + cr * (rstar - right);
+    auto const rstar  = (cr * right - fr * normal + prstar * dstar) / (cr - cstar);
+    auto const frstar = fr * normal + cr * (rstar - right);
     return frstar;
   }
 };
 
-} // namespace flux
+} // namespace numflux
 
 } // namespace fivo
 

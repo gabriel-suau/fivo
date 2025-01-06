@@ -13,7 +13,7 @@ int main() {
   auto right_bc = fivo::system::IdealGasEulerP<1>::BCTransmissive::make();
 
   // Create the system
-  auto system = fivo::system::IdealGasEulerP<1>(mesh, left_bc, right_bc, gamma);
+  auto system = fivo::system::IdealGasEulerP<1>(mesh, left_bc, right_bc, {gamma});
   using state_type = typename fivo::system::IdealGasEulerP<1>::state_type;
 
   // Initial value (r, q, u) as a function of space
@@ -43,10 +43,10 @@ int main() {
                                           std::make_pair("concentration", concentration));
 
   // Solve and save for each numerical flux
-  auto const fluxes = std::make_tuple(fivo::flux::Rusanov{},
-                                      fivo::flux::HLL{},
-                                      fivo::flux::HLLC{},
-                                      fivo::flux::Godunov{});
+  auto const fluxes = std::make_tuple(fivo::numflux::Rusanov{},
+                                      fivo::numflux::HLL{},
+                                      fivo::numflux::HLLC{},
+                                      fivo::numflux::Godunov{});
   fivo::traits::for_each
     (fluxes,
      [&] (auto const& flux) {

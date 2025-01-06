@@ -23,9 +23,9 @@ int main(int argc, char** argv) {
   auto const quantities = std::make_tuple(std::make_pair("velocity", u));
 
   // Solve and save for each numerical flux
-  auto const fluxes = std::make_tuple(fivo::flux::Rusanov{},
-                                      fivo::flux::HLL{},
-                                      fivo::flux::Godunov{});
+  auto const fluxes = std::make_tuple(fivo::numflux::Rusanov{},
+                                      fivo::numflux::HLL{},
+                                      fivo::numflux::Godunov{});
   fivo::traits::for_each
     (fluxes,
      [&] (auto const& flux) {

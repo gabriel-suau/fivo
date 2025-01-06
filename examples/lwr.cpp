@@ -14,7 +14,7 @@ int main(int argc, char** argv) {
   auto right_bc = fivo::system::LWRTrafficFlow::BCTransmissive::make();
 
   // Create the system
-  auto system = fivo::system::LWRTrafficFlow(mesh, left_bc, right_bc, rhomax, umax);
+  auto system = fivo::system::LWRTrafficFlow(mesh, left_bc, right_bc, {rhomax, umax});
   using state_type = typename fivo::system::LWRTrafficFlow::state_type;
 
   // Riemann problem (rarefaction)
@@ -31,9 +31,9 @@ int main(int argc, char** argv) {
                                           std::make_pair("velocity", velocity));
 
   // Solve and save for each numerical flux
-  auto const fluxes = std::make_tuple(fivo::flux::Rusanov{},
-                                      fivo::flux::HLL{},
-                                      fivo::flux::Godunov{});
+  auto const fluxes = std::make_tuple(fivo::numflux::Rusanov{},
+                                      fivo::numflux::HLL{},
+                                      fivo::numflux::Godunov{});
   fivo::traits::for_each
     (fluxes,
      [&] (auto const& flux) {

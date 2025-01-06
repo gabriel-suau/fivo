@@ -16,7 +16,7 @@ int main() {
   auto friction_model = fivo::system::SWE::NoFriction::make(0);
 
   // Create the system
-  auto system = fivo::system::SWE(mesh, left_bc, right_bc, grav, friction_model);
+  auto system = fivo::system::SWE(mesh, left_bc, right_bc, {grav}, friction_model);
   using state_type = typename fivo::system::SWE::state_type;
 
   // Initial value (h, q) as a function of space
@@ -40,9 +40,9 @@ int main() {
                                           std::make_pair("velocity", velocity));
 
   // Solve and save for each numerical flux
-  auto const fluxes = std::make_tuple(fivo::flux::Rusanov{},
-                                      fivo::flux::HLL{},
-                                      fivo::flux::Godunov{});
+  auto const fluxes = std::make_tuple(fivo::numflux::Rusanov{},
+                                      fivo::numflux::HLL{},
+                                      fivo::numflux::Godunov{});
   fivo::traits::for_each
     (fluxes,
      [&] (auto const& flux) {

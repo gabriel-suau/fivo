@@ -17,7 +17,7 @@ int main(int argc, char** argv) {
   auto right_bc = fivo::system::LinearAcousticsPressure::BCTransmissive::make();
 
   // Create the system
-  auto system = fivo::system::LinearAcousticsPressure(mesh, left_bc, right_bc, c, r0, u0);
+  auto system = fivo::system::LinearAcousticsPressure(mesh, left_bc, right_bc, {c, r0, u0});
   using state_type = typename fivo::system::LinearAcousticsPressure::state_type;
 
   // Initial value : p = gaussian, u = 0
@@ -32,9 +32,9 @@ int main(int argc, char** argv) {
                                           std::make_pair("velocity", velocity));
 
   // Solve and save for each numerical flux
-  auto const fluxes = std::make_tuple(fivo::flux::Rusanov{},
-                                      fivo::flux::HLL{},
-                                      fivo::flux::Godunov{});
+  auto const fluxes = std::make_tuple(fivo::numflux::Rusanov{},
+                                      fivo::numflux::HLL{},
+                                      fivo::numflux::Godunov{});
   fivo::traits::for_each
     (fluxes,
      [&] (auto const& flux) {

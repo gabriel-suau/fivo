@@ -15,11 +15,12 @@ int main() {
   auto right_bc = fivo::system::SWE::BCReflective::make();
 
   // Friction model
-  auto friction_model = fivo::system::SWE::ManningFriction::make(0.04);
-  // auto friction_model = fivo::SWE::DarcyWeisbachFriction::make(0.093);
+  // auto friction_model = fivo::system::SWE::ManningFriction::make(0.04);
+  // auto friction_model = fivo::system::SWE::DarcyWeisbachFriction::make(0.093);
+  auto friction_model = fivo::system::SWE::NoFriction::make(0.0);
 
   // Create the system
-  auto system = fivo::system::SWE(mesh, left_bc, right_bc, grav, friction_model);
+  auto system = fivo::system::SWE(mesh, left_bc, right_bc, {grav}, friction_model);
   using state_type = typename fivo::system::SWE::state_type;
 
   // Topography as a function of space
@@ -54,13 +55,13 @@ int main() {
                                           std::make_pair("velocity", velocity));
 
   // Solve and save for each numerical flux
-  auto const fluxes = std::make_tuple(fivo::flux::Rusanov{},
-                                      fivo::flux::HLL{},
-                                      fivo::flux::Godunov{});
+  auto const fluxes = std::make_tuple(fivo::numflux::Rusanov{},
+                                      fivo::numflux::HLL{},
+                                      fivo::numflux::Godunov{});
   fivo::traits::for_each
     (fluxes,
      [&] (auto const& flux) {
-       auto io = fivo::IOManager(std::string("swe_") + flux.name(), 1, mesh);
+       auto io = fivo::IOManager(std::string("swe_") + flux.name(), 20, mesh);
        auto X = fivo::discretize(mesh, init);
        fivo::solve(io, system, flux, fivo::time::RK1{}, X, t0, tf, dt, quantities);
      });
